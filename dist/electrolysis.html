@@ -1249,7 +1249,7 @@ body.focus .focus-exit { display: inline-block; }
     { id: 'motion.count', type: 'range', label: 'Number of ions', min: 6, max: 60, step: 2, default: 24, group: 'Motion' },
     { id: 'motion.jitter', type: 'range', label: 'Random wobble', min: 0, max: 3, step: 0.1, default: 1, group: 'Motion' },
     { id: 'motion.drift', type: 'range', label: 'Drift speed (power on)', min: 0.2, max: 3, step: 0.1, default: 1, group: 'Motion' },
-    { id: 'motion.discharge', type: 'range', label: 'Discharge animation time', min: 0.2, max: 2, step: 0.1, default: 0.8, unit: 's', group: 'Motion' },
+    { id: 'motion.discharge', type: 'range', label: 'Discharge animation time (electrons cross, then the ion changes)', min: 0.2, max: 3, step: 0.1, default: 1.4, unit: 's', group: 'Motion' },
     { id: 'motion.bubbleSpeed', type: 'range', label: 'Bubble rise speed', min: 0.3, max: 3, step: 0.1, default: 1, group: 'Motion' },
     { id: 'motion.bubbleSize', type: 'range', label: 'Bubble size', min: 0.5, max: 2, step: 0.1, default: 1, group: 'Motion' },
     { id: 'motion.electronSpeed', type: 'range', label: 'Electron speed in wires', min: 0.2, max: 3, step: 0.1, default: 1, group: 'Motion' },
@@ -1290,6 +1290,12 @@ body.focus .focus-exit { display: inline-block; }
     { id: 'predict', type: 'toggle', label: 'Predict the products (hide until revealed)', default: false, showIf: v => v.guide === 'free' },
     { id: 'reveal', type: 'button', label: 'Reveal products', primary: true, showIf: v => v.guide === 'free' && v.predict }
   ];
+  // Show/hide each kind of ion (e.g. record the cathode with only Cu2+ and H+ visible). Hidden ions still
+  // take part in the simulation; they and their bubbles are just not drawn.
+  Object.keys(SPECIES).forEach((k, i) => controls.splice(controls.findIndex(x => x.id === 'labels') + 1 + i, 0, {
+    id: 'show.' + k, type: 'toggle', label: 'Show ' + SPECIES[k].name + 's', default: true,
+    showIf: v => { const pr = PRESET_BY_ID[v.preset]; return !!pr && (!!pr.ions[k] || (pr.state === 'aqueous' && (k === 'H+' || k === 'OH-'))); }
+  }));
 
   // ---------------------------------------------------------------- simulation
   function create(ctx) {
@@ -1818,7 +1824,7 @@ body.focus .focus-exit { display: inline-block; }
       p.side = x < E.cx ? -1 : 1;
       p.electrode = E.name;
       charge += E.name === 'cathode' ? -Math.abs(p.sp.charge) : Math.abs(p.sp.charge);
-      const sx = E.cx + p.side * (E.w / 2 + r);
+      const sx = E.cx + p.side * (E.w / 2 + r * 1.9);
       const sy = Math.min(Math.max(y, L.liquid.y + r), E.y + E.h - r);
       setPx(p, sx, sy, L);
       p.vx = p.vy = 0;
@@ -1899,8 +1905,8 @@ body.focus .focus-exit { display: inline-block; }
       drawElectrode(L.cathode, L, d, hidden);
       drawElectrode(L.anode, L, d, hidden);
 
-      ions.forEach(p => drawIon(p, L, d, c));
-      bubbles.forEach(b => drawBubble(b, L, d, c, hidden));
+      ions.forEach(p => { if (c['show.' + p.k] !== false) drawIon(p, L, d, c); });
+      bubbles.forEach(b => { if (c['show.' + b.k] !== false) drawBubble(b, L, d, c, hidden); });
       flashes.forEach(f => g.alpha(1 - f.t * 2, () => g.circle(f.x, f.y, 6 * s + f.t * 20 * s, null, d['colour.electron'], 2 * s)));
 
       ['cathode', 'anode'].forEach(E => drawProducts(E, L, d, hidden));
@@ -2179,7 +2185,7 @@ body.focus .focus-exit { display: inline-block; }
       const s = L.s, dur = d['motion.discharge'];
       let scale = 1;
       if (p.state === 'emerging') scale = Math.min(1, p.t / 0.5);
-      if (p.state === 'discharging') scale = Math.max(0.15, 1 - 0.85 * Math.pow(p.t / dur, 2));
+      if (p.state === 'discharging') { const k = Math.max(0, (p.t - dur * 0.65) / (dur * 0.35)); scale = Math.max(0.15, 1 - 0.85 * k * k); }
       const r = ionR(p) * scale;
       const [x, y] = px(p, L);
       const col = d['ion.' + p.k + '.colour'];
@@ -2202,16 +2208,19 @@ body.focus .focus-exit { display: inline-block; }
       }
       // electron transfer during discharge
       if (p.state === 'discharging') {
+        // electrons start inside the electrode (its centre line) and travel across the gap into the ion,
+        // one after another, during the first 65% of the discharge time; the ion then shrinks into its product
         const E = L[p.electrode];
         const n = Math.abs(p.sp.charge);
-        const ex = E.cx + p.side * E.w / 2;
-        const ecol = d['colour.electron'], er = 4 * s * d['motion.electronSize'];
+        const ex = E.cx, ix = x - p.side * r * 0.35;
+        const ecol = d['colour.electron'], er = 6 * s * d['motion.electronSize'];
+        const stagger = (dur * 0.65) / (n + 1);
         for (let k = 0; k < n; k++) {
-          let t = (p.t - k * 0.12) / (dur * 0.7);
+          let t = (p.t - k * stagger) / (dur * 0.65 - (n - 1) * stagger);
           if (t < 0 || t > 1) continue;
           if (p.electrode === 'anode') t = 1 - t;   // electrons leave the ion into the anode
-          const bx = ex + (x - ex) * t, by = y + (k - (n - 1) / 2) * er * 1.8;
-          g.circle(bx, by, er, ecol, g.darken(ecol, 0.4), 1);
+          const bx = ex + (ix - ex) * t, by = y + (k - (n - 1) / 2) * er * 1.6;
+          g.circle(bx, by, er, ecol, g.darken(ecol, 0.4), 1.2 * s);
           g.formula(bx, by, 'e^-', { size: er * 1.3, color: '#1f2937', align: 'center', weight: '700' });
         }
       }
@@ -2283,6 +2292,7 @@ body.focus .focus-exit { display: inline-block; }
     return { reset, update, draw, action, onControl, get products() { return R; }, get step() { return storyStep; }, get stepCount() { return steps.length; }, get ionCount() { return ions.length; },
       // free ions parked below their target electrode (debug metric for tools/verify.py)
       get stuck() { const L = layout(); return ions.filter(p => { if (p.state !== 'free') return false; const [x, y] = px(p, L); const T = p.sp.charge > 0 ? L.cathode : L.anode; return y > T.y + T.h && Math.abs(T.cx - x) < T.w / 2 + ionR(p) * 2.5; }).length; },
+      get busyIons() { return ions.filter(p => p.state !== 'free').map(p => p.k + ':' + p.state + ':' + p.t.toFixed(2)); },
       get speciesCounts() { const o = {}; ions.forEach(p => { o[p.k] = (o[p.k] || 0) + 1; }); return o; },
       questionFor, questionsFor, openQuestion };
   }

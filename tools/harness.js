@@ -2,7 +2,7 @@
 // requestAnimationFrame under --virtual-time-budget, so this drives sim.update() by hand
 // and prints results into a pre element with id errlog, which verify.py reads from the DOM dump.
 //
-// URL params:  steps=N sim=SECS   walk N Next presses, simulate SECS each, report ions/step
+// URL params:  steps=N sim=SECS   walk N Next presses, simulate SECS each (last=SECS for the final one)
 //              check=1            self-check every study question (answers pass own check)
 //              open=I             open the question for step I and leave it on screen
 //              labels=1           with check=1, also list step labels
@@ -10,6 +10,8 @@ window.__errs=[]; window.onerror=function(m,s,l,c,e){window.__errs.push(m+' @'+l
 setTimeout(function(){
   var q = new URLSearchParams(location.search), out=[];
   try {
+    // stop the app's own animation loop so only the manual update() calls below advance the sim
+    var eng = window.app.engine; if (eng && eng.playing && eng.toggle) eng.toggle();
     if (q.get('check')) {
       var sim = window.app.sim, n = sim.stepCount, bad = 0, total = 0;
       for (var i0=0;i0<n;i0++){ var qsl = sim.questionsFor(i0); for (var j=0;j<qsl.length;j++){ var qq = qsl[j]; total++;
@@ -25,10 +27,10 @@ setTimeout(function(){
       window.app.sim.openQuestion(parseInt(q.get('open')));
       window.app.sim.draw(); out.push('ions '+window.app.sim.ionCount+' step '+window.app.sim.step);
     } else {
-      var steps = parseInt(q.get('steps')||'0'), secs = parseFloat(q.get('sim')||'3');
-      for (var k=0;k<steps;k++){ window.app.sim.action('next'); for (var i=0;i<secs*60;i++) window.app.sim.update(1/60); window.app.sim.draw(); }
-      for (var i=0;i<secs*60;i++) window.app.sim.update(1/60);
-      window.app.sim.draw(); out.push('ions '+window.app.sim.ionCount+' step '+window.app.sim.step+' stuck '+window.app.sim.stuck+' '+JSON.stringify(window.app.sim.speciesCounts));
+      var steps = parseInt(q.get('steps')||'0'), secs = parseFloat(q.get('sim')||'3'), last = parseFloat(q.get('last')||secs);
+      for (var k=0;k<steps;k++){ window.app.sim.action('next'); var ss = k===steps-1 ? last : secs; for (var i=0;i<ss*60;i++) window.app.sim.update(1/60); window.app.sim.draw(); }
+      if (!steps) for (var i=0;i<secs*60;i++) window.app.sim.update(1/60);
+      window.app.sim.draw(); out.push('ions '+window.app.sim.ionCount+' step '+window.app.sim.step+' stuck '+window.app.sim.stuck+' '+JSON.stringify(window.app.sim.speciesCounts)+' busy '+window.app.sim.busyIons.join(','));
     }
   } catch(e){ window.__errs.push('step: '+e.message+' '+e.stack); }
   var p=document.createElement('pre');p.id='errlog';p.textContent=(window.__errs.join('\n')||'NO ERRORS')+' | '+out.join(' | ');document.body.appendChild(p);

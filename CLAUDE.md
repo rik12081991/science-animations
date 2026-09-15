@@ -2,7 +2,7 @@
 
 GCSE classroom animations. Vanilla JS + Canvas, no dependencies, offline on iPad Safari, iframe-embeddable.
 One topic so far: `topics/electrolysis.js`. Framework in `core/`. `python3 build.py` -> `dist/<topic>.html`.
-Docs: `docs/EMBED.md`, `docs/NEW-TOPIC.md`, `README.md` (modes and keys). Not a git repo.
+Docs: `docs/EMBED.md`, `docs/NEW-TOPIC.md`, `README.md` (modes and keys). Git repo, remote github.com/rik12081991/science-animations; GitHub Pages serves the main branch root (index.html + core/ + topics/, offline via sw.js).
 
 ## Token rules (the last session cost 5x what it needed)
 

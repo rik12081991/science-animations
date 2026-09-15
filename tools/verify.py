@@ -11,6 +11,7 @@ Rebuilds dist/ and docs/MAP.md first. Screenshots are downscaled to --width (def
 so they cost ~400 tokens instead of ~1000. Exit code 1 if any scenario reports errors.
 """
 import argparse, os, pathlib, re, subprocess, sys, tempfile
+from urllib.parse import quote
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -27,7 +28,7 @@ def build(topic):
     return out
 
 def run(harness, params, shot=None, width=640):
-    url = f'file://{harness}?' + '&'.join(f'{k}={v}' for k, v in params.items() if v is not None)
+    url = f'file://{harness}?' + '&'.join(f'{quote(str(k), safe="")}={quote(str(v), safe="")}' for k, v in params.items() if v is not None)
     args = [CHROME, '--headless=new', '--disable-gpu', '--virtual-time-budget=3000', '--window-size=1024,760']
     if shot:
         args += [f'--screenshot={shot}', url]
@@ -43,7 +44,7 @@ def main():
     ap.add_argument('--topic', default='electrolysis')
     ap.add_argument('--preset'); ap.add_argument('--guide', choices=['steps', 'study', 'free'])
     ap.add_argument('--difficulty', choices=['easy', 'medium', 'hard']); ap.add_argument('--electrodes', choices=['one', 'both'])
-    ap.add_argument('--steps', type=int); ap.add_argument('--sim', default='1'); ap.add_argument('--check', action='store_true')
+    ap.add_argument('--steps', type=int); ap.add_argument('--sim', default='1'); ap.add_argument('--last', help='sim seconds for the final step only'); ap.add_argument('--check', action='store_true')
     ap.add_argument('--open', type=int); ap.add_argument('--all', action='store_true')
     ap.add_argument('--param', action='append', default=[], help='extra URL param k=v, e.g. replenish=0')
     ap.add_argument('--shot'); ap.add_argument('--width', type=int, default=640)
@@ -62,6 +63,7 @@ def main():
         if a.check: s['check'] = 1
         elif a.open is not None: s['open'] = a.open
         else: s['steps'] = a.steps or 0
+        if a.last: s['last'] = a.last
         for kv in a.param: k, v = kv.split('=', 1); s[k] = v
         scenarios.append(s)
     else:
