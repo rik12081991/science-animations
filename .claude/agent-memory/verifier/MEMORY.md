@@ -1,0 +1,3 @@
+- [Brine free-run baseline](baseline_brine_free.md) — ion counts (19 H2/24 Cl2 @15s) and known bottom-clustering quirk at electrode base
+- [Dilute NaCl steps baseline](baseline_dilute_nacl_steps.md) — step 9 = "Step 4b" caption text re: dilute solution / OH- discharged
+- [CuSO4 inert free-run baseline](baseline_cuso4_inert_free.md) — 5s: ~4 Cu2+/thick cathode coating; 8s: ~7 Cu2+, clustered at cathode not spread

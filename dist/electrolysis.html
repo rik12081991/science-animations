@@ -1,0 +1,2313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f8fafc">
+<title>Electrolysis · Science Animations</title>
+<style>
+:root {
+  --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #64748b;
+  --accent: #2563eb; --border: #e2e8f0; --radius: 12px;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; overflow-x: hidden; background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px; -webkit-text-size-adjust: 100%;
+}
+#app { max-width: 1200px; margin: 0 auto; padding: 12px 16px 40px; }
+.app-header { display: flex; align-items: center; gap: 12px; padding: 4px 0 10px; }
+.app-title { font-size: 1.25rem; margin: 0; flex: 1; }
+.app-back { color: var(--accent); text-decoration: none; font-weight: 600; padding: 8px 0; }
+.stage { position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sim-canvas { display: block; touch-action: none; }
+
+.transport { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 0; }
+.transport .speed { display: flex; align-items: center; gap: 8px; margin-left: auto; font-weight: 600; flex: 1 1 180px; min-width: 0; max-width: 260px; }
+.transport input[type=range] { flex: 1; min-width: 60px; width: auto; }
+
+.btn {
+  min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel); font: inherit; font-weight: 600; color: var(--text); cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn:active { transform: scale(0.98); }
+
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 10px; }
+.panel > summary { padding: 14px 16px; font-weight: 700; cursor: pointer; list-style: none; display: flex; align-items: center; }
+.panel > summary::-webkit-details-marker { display: none; }
+.panel > summary::after { content: '›'; margin-left: auto; font-size: 1.4rem; line-height: 1; transition: transform .15s; }
+.panel[open] > summary::after { transform: rotate(90deg); }
+.panel-body { padding: 0 16px 16px; }
+
+.ctl-root { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 20px; }
+.ctl-group {
+  border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px 12px; margin: 4px 0 0; grid-column: 1 / -1;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 20px;
+}
+.ctl-group > legend { font-weight: 700; color: var(--muted); font-size: .85rem; padding: 0 6px; }
+.ctl-row { min-width: 0; display: flex; flex-direction: column; gap: 4px; min-height: 44px; justify-content: center; }
+.ctl-row.ctl-inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.ctl-label { font-weight: 600; }
+.ctl-head { display: flex; justify-content: space-between; align-items: baseline; }
+.ctl-value { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+input[type=range] { width: 100%; height: 44px; margin: 0; accent-color: var(--accent); }
+input[type=color] { width: 64px; height: 40px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; background: #fff; flex: none; }
+input[type=text] { min-height: 44px; font: inherit; border-radius: 10px; border: 1px solid var(--border); padding: 0 10px; }
+select { max-width: 100%; min-height: 44px; font: inherit; border-radius: 10px; border: 1px solid var(--border); padding: 0 10px; background: #fff; color: var(--text); }
+
+.ctl-switch {
+  appearance: none; -webkit-appearance: none; width: 52px; height: 32px; border-radius: 16px;
+  background: #cbd5e1; position: relative; cursor: pointer; flex: none; margin: 0; outline-offset: 2px;
+}
+.ctl-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.ctl-switch:checked { background: var(--accent); }
+.ctl-switch:checked::after { left: 23px; }
+
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button {
+  min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: #fff; font: inherit; color: var(--text); cursor: pointer;
+}
+.seg button[aria-pressed=true] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.design-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; width: 100%; }
+.design-tools textarea { width: 100%; min-height: 140px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; border-radius: 8px; border: 1px solid var(--border); padding: 8px; }
+
+.launcher { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.launch-card { display: block; padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); }
+.launch-title { font-weight: 700; font-size: 1.1rem; }
+.launch-desc { color: var(--muted); margin-top: 4px; }
+
+body.embed #app { padding: 6px 8px 12px; max-width: none; }
+body.embed .app-header { padding-bottom: 6px; }
+body.focus .app-header, body.focus .panel-design { display: none; }
+body.focus #app { max-width: none; padding: 6px 8px; }
+body.focus .stage { border-radius: 0; }
+#app:fullscreen { background: var(--bg); overflow: auto; }
+.focus-exit { display: none; }
+body.focus .focus-exit { display: inline-block; }
+
+.stage-overlay { position: absolute; inset: 0; pointer-events: none; }
+.q-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, .35); pointer-events: auto; padding: 12px; }
+.q-card { background: #fff; color: var(--text); border-radius: 14px; padding: 18px 20px; width: min(600px, 100%); max-height: 100%; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.q-prompt { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+.q-hint { color: var(--muted); margin-bottom: 8px; }
+.q-opts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.q-opt { min-height: 46px; padding: 0 16px; border: 2px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); font: inherit; font-size: 1.05rem; cursor: pointer; }
+.q-opt[aria-pressed=true] { border-color: var(--accent); background: #dbeafe; }
+.q-opt.wrong { border-color: #dc2626; background: #fee2e2; }
+.q-opt.right { border-color: #16a34a; background: #dcfce7; }
+.q-typed { display: flex; gap: 8px; margin: 12px 0; }
+.q-input { flex: 1; min-width: 0; min-height: 46px; font: inherit; font-size: 1.1rem; padding: 0 12px; border: 2px solid var(--border); border-radius: 10px; }
+.q-input.wrong { border-color: #dc2626; }
+.q-input.right { border-color: #16a34a; }
+.q-feedback { min-height: 1.4em; font-weight: 600; margin: 4px 0 8px; }
+.q-feedback.bad { color: #b91c1c; }
+.q-feedback.good { color: #15803d; }
+.q-answer { font-weight: 600; margin: 4px 0; }
+.q-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-match { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 12px 0; }
+.q-col { display: flex; flex-direction: column; gap: 8px; }
+.q-match .q-opt { text-align: left; padding: 8px 12px; line-height: 1.3; }
+.q-pair { display: block; font-size: .9em; color: var(--accent); font-weight: 600; }
+.q-opt.right .q-pair { color: #15803d; }
+.q-opt.wrong .q-pair { color: #b91c1c; }
+.q-field-label { font-weight: 600; margin-top: 8px; }
+@media (max-width: 520px) { .q-match { grid-template-columns: 1fr; } }
+
+.q-gaps { margin: 12px 0 4px; }
+.q-sentence { font-size: 1.1rem; line-height: 2.4; padding: 2px 8px; border-radius: 8px; }
+.q-sentence.right { background: #dcfce7; }
+.q-sentence.wrong { background: #fee2e2; }
+.q-blank { min-width: 90px; min-height: 40px; margin: 0 4px; padding: 0 10px; border: 2px dashed var(--border); border-radius: 8px; background: #fff; font: inherit; color: var(--muted); cursor: pointer; vertical-align: middle; }
+.q-blank.filled { border-style: solid; color: var(--text); font-weight: 600; }
+.q-blank[aria-pressed=true] { border-color: var(--accent); background: #dbeafe; }
+.q-bank .q-opt { font-weight: 600; }
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// Topic registry. Each topic file calls Topics.register({...}) once.
+// Contract:
+//   id            unique string, also the file name in topics/
+//   title         shown in header and launcher
+//   aspect        canvas height / width (default 0.64)
+//   presets       [{id, title, ...}]  named starting states
+//   controls      schema for the teaching panel (see core/controls.js)
+//   designSchema  schema for the design panel (see core/design.js)
+//   create(ctx)   returns { reset(presetId), update(dt), draw(), action(id) }
+//                 ctx = { g, canvas, controls, design }
+(function () {
+  const topics = {};
+  const order = [];
+  window.Topics = {
+    register(def) {
+      if (!def || !def.id) throw new Error('Topic needs an id');
+      topics[def.id] = def;
+      if (!order.includes(def.id)) order.push(def.id);
+    },
+    get(id) { return topics[id]; },
+    list() { return order.map(id => topics[id]); }
+  };
+})();
+
+</script>
+<script>
+// HiDPI canvas plus drawing helpers. All coordinates are CSS pixels.
+(function () {
+  function create(container, opts) {
+    opts = opts || {};
+    const aspect = opts.aspect || 0.64;
+    const el = document.createElement('canvas');
+    el.className = 'sim-canvas';
+    container.appendChild(el);
+    const ctx = el.getContext('2d');
+    const api = { el, ctx, w: 0, h: 0, dpr: 1, resize, onResize: null };
+    function resize() {
+      const cssW = container.clientWidth || 800;
+      const cssH = Math.round(cssW * aspect);
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      if (cssW === api.w && cssH === api.h && dpr === api.dpr) return;
+      api.w = cssW; api.h = cssH; api.dpr = dpr;
+      el.style.width = cssW + 'px';
+      el.style.height = cssH + 'px';
+      el.width = Math.round(cssW * dpr);
+      el.height = Math.round(cssH * dpr);
+      if (api.onResize) api.onResize(cssW, cssH);
+    }
+    window.addEventListener('resize', resize);
+    if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(resize)).observe(container);
+    resize();
+    return api;
+  }
+
+  function hexToRgb(hex) {
+    hex = (hex || '#000000').replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const n = parseInt(hex, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function withAlpha(hex, a) {
+    if (hex.startsWith('rgb')) return hex;
+    const [r, g, b] = hexToRgb(hex);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  function contrastText(hex) {
+    const [r, g, b] = hexToRgb(hex);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#111827' : '#ffffff';
+  }
+  function darken(hex, f) {
+    const [r, g, b] = hexToRgb(hex).map(v => Math.round(v * (1 - f)));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // Formula strings: "_" + digits = subscript, "^" + run = superscript.
+  //   "SO_4^2-"  "2H^+ + 2e^- → H_2"
+  function parseFormula(str) {
+    const parts = []; let i = 0, cur = '';
+    const flush = () => { if (cur) { parts.push({ t: 'main', s: cur }); cur = ''; } };
+    while (i < str.length) {
+      const ch = str[i];
+      if (ch === '_') {
+        flush(); let j = i + 1, s = '';
+        while (j < str.length && /[0-9]/.test(str[j])) { s += str[j]; j++; }
+        parts.push({ t: 'sub', s }); i = j;
+      } else if (ch === '^') {
+        flush(); let j = i + 1, s = '';
+        while (j < str.length && !' ),.;:'.includes(str[j])) { s += str[j]; j++; }
+        parts.push({ t: 'sup', s: s.replace(/-/g, '−') }); i = j;
+      } else { cur += ch; i++; }
+    }
+    flush();
+    return parts;
+  }
+
+  function G(canvas) {
+    const ctx = canvas.ctx;
+    const defaultFont = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    function fontStr(o) {
+      const fam = o.font && o.font !== 'system-ui' ? '"' + o.font + '", ' + defaultFont : defaultFont;
+      return (o.weight || '400') + ' ' + (o.size || 14) + 'px ' + fam;
+    }
+    function measureParts(parts, o) {
+      const size = o.size || 14, small = size * 0.68;
+      let w = 0;
+      parts.forEach(p => {
+        ctx.font = fontStr(Object.assign({}, o, { size: p.t === 'main' ? size : small }));
+        p.w = ctx.measureText(p.s).width; w += p.w;
+      });
+      return w;
+    }
+    const g = {
+      ctx,
+      get w() { return canvas.w; },
+      get h() { return canvas.h; },
+      withAlpha, contrastText, darken,
+      mix(a, b, k) {
+        const A = hexToRgb(a), B = hexToRgb(b); k = Math.max(0, Math.min(1, k));
+        return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',') + ')';
+      },
+      begin(bg) {
+        ctx.setTransform(canvas.dpr, 0, 0, canvas.dpr, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = bg || '#fff';
+        ctx.fillRect(0, 0, canvas.w, canvas.h);
+      },
+      alpha(a, fn) { const prev = ctx.globalAlpha; ctx.globalAlpha = prev * a; fn(); ctx.globalAlpha = prev; },
+      circle(x, y, r, fill, stroke, lw) {
+        if (r <= 0) return;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+      },
+      ellipse(x, y, rx, ry, fill) {
+        ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fillStyle = fill; ctx.fill();
+      },
+      rect(x, y, w, h, fill, stroke, lw) {
+        if (fill) { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.strokeRect(x, y, w, h); }
+      },
+      roundRect(x, y, w, h, r, fill, stroke, lw) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+      },
+      path(points, color, lw, dash) {
+        if (points.length < 2) return;
+        ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]);
+        for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+        ctx.strokeStyle = color; ctx.lineWidth = lw || 1; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]);
+      },
+      line(x1, y1, x2, y2, color, lw, dash) { g.path([[x1, y1], [x2, y2]], color, lw, dash); },
+      arrow(x1, y1, x2, y2, color, lw, head) {
+        head = head || 8;
+        g.line(x1, y1, x2, y2, color, lw);
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath(); ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(a - 0.5), y2 - head * Math.sin(a - 0.5));
+        ctx.lineTo(x2 - head * Math.cos(a + 0.5), y2 - head * Math.sin(a + 0.5));
+        ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+      },
+      arrowHead(x, y, angle, color, size) {
+        ctx.beginPath(); ctx.moveTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
+        ctx.lineTo(x + size * Math.cos(angle + 2.5), y + size * Math.sin(angle + 2.5));
+        ctx.lineTo(x + size * Math.cos(angle - 2.5), y + size * Math.sin(angle - 2.5));
+        ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+      },
+      text(x, y, str, o) {
+        o = o || {};
+        ctx.font = fontStr(o); ctx.fillStyle = o.color || '#000';
+        ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.baseline || 'middle';
+        ctx.fillText(str, x, y);
+        return ctx.measureText(str).width;
+      },
+      textWidth(str, o) { ctx.font = fontStr(o || {}); return ctx.measureText(str).width; },
+      formula(x, y, str, o) {
+        o = o || {};
+        const parts = parseFormula(str);
+        const total = measureParts(parts, o);
+        const size = o.size || 14, small = size * 0.68;
+        let cx = x;
+        if (o.align === 'center') cx = x - total / 2; else if (o.align === 'right') cx = x - total;
+        ctx.textAlign = 'left'; ctx.textBaseline = o.baseline || 'middle'; ctx.fillStyle = o.color || '#000';
+        parts.forEach(p => {
+          const isMain = p.t === 'main';
+          ctx.font = fontStr(Object.assign({}, o, { size: isMain ? size : small }));
+          const dy = p.t === 'sub' ? size * 0.28 : p.t === 'sup' ? -size * 0.42 : 0;
+          ctx.fillText(p.s, cx, y + dy); cx += p.w;
+        });
+        return total;
+      },
+      formulaWidth(str, o) { return measureParts(parseFormula(str), o || {}); },
+      // Draw a formula, shrinking the font until it fits maxWidth.
+      formulaFit(x, y, str, o, maxWidth) {
+        o = Object.assign({}, o);
+        let w = g.formulaWidth(str, o);
+        while (w > maxWidth && o.size > 6) { o.size *= 0.9; w = g.formulaWidth(str, o); }
+        return g.formula(x, y, str, o);
+      }
+    };
+    return g;
+  }
+  window.SimCanvas = { create, G, withAlpha, contrastText };
+})();
+
+</script>
+<script>
+// Animation loop with fixed timestep, play/pause/step and a speed multiplier.
+(function () {
+  function create(hooks) {
+    const FIXED = 1 / 60, MAX_FRAME = 0.1;
+    let playing = false, speed = 1, last = 0, acc = 0, raf = null, time = 0;
+    function frame(ts) {
+      raf = requestAnimationFrame(frame);
+      const now = ts / 1000;
+      let dt = last ? now - last : 0;
+      last = now;
+      if (dt > MAX_FRAME) dt = MAX_FRAME;
+      if (playing) {
+        acc += dt * speed;
+        let n = 0;
+        while (acc >= FIXED && n < 10) { hooks.update(FIXED); time += FIXED; acc -= FIXED; n++; }
+        if (n >= 10) acc = 0;
+      }
+      hooks.draw();
+    }
+    const api = {
+      start() { if (!raf) raf = requestAnimationFrame(frame); },
+      stop() { if (raf) cancelAnimationFrame(raf); raf = null; last = 0; },
+      play() { playing = true; },
+      pause() { playing = false; },
+      toggle() { playing = !playing; api.onChange && api.onChange(); return playing; },
+      step() { playing = false; for (let i = 0; i < 6; i++) { hooks.update(FIXED); time += FIXED; } api.onChange && api.onChange(); },
+      setSpeed(s) { speed = s; },
+      get speed() { return speed; },
+      get playing() { return playing; },
+      get time() { return time; },
+      onChange: null
+    };
+    return api;
+  }
+  window.Engine = { create };
+})();
+
+</script>
+<script>
+// Small helpers for particle motion. Positions and velocities in pixels.
+(function () {
+  const P = {
+    rand(a, b) { return a + Math.random() * (b - a); },
+    pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+    // Random acceleration plus damping (Brownian-ish wobble).
+    wander(p, jitter, dt, damping) {
+      p.vx += (Math.random() - 0.5) * jitter * dt;
+      p.vy += (Math.random() - 0.5) * jitter * dt;
+      const d = Math.exp(-(damping == null ? 2.2 : damping) * dt);
+      p.vx *= d; p.vy *= d;
+    },
+    clampSpeed(p, max) {
+      const s = Math.hypot(p.vx, p.vy);
+      if (s > max) { p.vx *= max / s; p.vy *= max / s; }
+    },
+    // Keep p inside rect {x,y,w,h} with radius r; bounce softly.
+    confine(p, rect, r, bounce) {
+      bounce = bounce == null ? 0.5 : bounce;
+      if (p.x < rect.x + r) { p.x = rect.x + r; p.vx = Math.abs(p.vx) * bounce; }
+      if (p.x > rect.x + rect.w - r) { p.x = rect.x + rect.w - r; p.vx = -Math.abs(p.vx) * bounce; }
+      if (p.y < rect.y + r) { p.y = rect.y + r; p.vy = Math.abs(p.vy) * bounce; }
+      if (p.y > rect.y + rect.h - r) { p.y = rect.y + rect.h - r; p.vy = -Math.abs(p.vy) * bounce; }
+    },
+    // Push overlapping particles apart. radiusOf(p) gives each radius. O(n^2), fine for n < 200.
+    separate(list, radiusOf, gap, canCollide) {
+      gap = gap || 2;
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i]; if (a.skip) continue;
+        const ra = radiusOf(a);
+        for (let j = i + 1; j < list.length; j++) {
+          const b = list[j]; if (b.skip) continue;
+          if (canCollide && !canCollide(a, b)) continue;
+          const rb = radiusOf(b);
+          let dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy), min = ra + rb + gap;
+          if (dist < min && dist > 0.001) {
+            const push = (min - dist) / 2; dx /= dist; dy /= dist;
+            a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push;
+          }
+        }
+      }
+    }
+  };
+  window.Particles = P;
+})();
+
+</script>
+<script>
+// Builds a panel of inputs from a schema. Used by both the teaching panel and the design panel.
+// Schema item: { id, type, label, default, group, min, max, step, unit, options, showIf(values) }
+// Types: toggle | range | select | segmented | colour | button | text
+(function () {
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function normOptions(opts) {
+    return opts.map(o => typeof o === 'string' ? { value: o, label: o.charAt(0).toUpperCase() + o.slice(1) } : o);
+  }
+  function fmt(v, item) {
+    if (item.format) return item.format(v);
+    const step = item.step || 1;
+    const dec = (String(step).split('.')[1] || '').length;
+    return Number(v).toFixed(dec) + (item.unit ? ' ' + item.unit : '');
+  }
+  let uid = 0;
+
+  function build(container, schema, initial, onChange) {
+    const values = Object.assign({}, initial);
+    const rows = [];
+    const groups = {};
+    const root = el('div', 'ctl-root');
+    container.appendChild(root);
+
+    function groupFor(name) {
+      if (!name) return root;
+      if (!groups[name]) {
+        const fs = el('fieldset', 'ctl-group');
+        fs.appendChild(el('legend', null, name));
+        root.appendChild(fs);
+        groups[name] = fs;
+      }
+      return groups[name];
+    }
+    function refreshVisibility() {
+      rows.forEach(r => { if (r.item.showIf) r.row.hidden = !r.item.showIf(values); });
+    }
+
+    schema.forEach(item => {
+      if (values[item.id] === undefined && item.default !== undefined) values[item.id] = item.default;
+      const row = el('div', 'ctl-row ctl-' + item.type);
+      row.dataset.id = item.id;
+      const label = el('label', 'ctl-label', item.label || item.id);
+      const id = 'ctl_' + (++uid);
+      let update = () => {};
+      const set = v => { values[item.id] = v; refreshVisibility(); if (onChange) onChange(item.id, v, values, item); };
+
+      switch (item.type) {
+        case 'toggle': {
+          const input = el('input', 'ctl-switch'); input.type = 'checkbox'; input.id = id;
+          input.checked = !!values[item.id];
+          input.addEventListener('change', () => set(input.checked));
+          label.htmlFor = id;
+          row.classList.add('ctl-inline'); row.appendChild(label); row.appendChild(input);
+          update = v => { input.checked = !!v; };
+          break;
+        }
+        case 'range': {
+          const input = el('input'); input.type = 'range'; input.id = id;
+          input.min = item.min; input.max = item.max; input.step = item.step || 1;
+          input.value = values[item.id];
+          const out = el('output', 'ctl-value', fmt(values[item.id], item));
+          input.addEventListener('input', () => { const v = parseFloat(input.value); out.textContent = fmt(v, item); set(v); });
+          label.htmlFor = id;
+          const head = el('div', 'ctl-head'); head.appendChild(label); head.appendChild(out);
+          row.appendChild(head); row.appendChild(input);
+          update = v => { input.value = v; out.textContent = fmt(v, item); };
+          break;
+        }
+        case 'select': {
+          const sel = el('select'); sel.id = id;
+          normOptions(item.options).forEach(o => {
+            const op = el('option', null, o.label); op.value = o.value; sel.appendChild(op);
+          });
+          sel.value = values[item.id];
+          sel.addEventListener('change', () => set(sel.value));
+          label.htmlFor = id;
+          row.appendChild(label); row.appendChild(sel);
+          update = v => { sel.value = v; };
+          break;
+        }
+        case 'segmented': {
+          const seg = el('div', 'seg');
+          const btns = [];
+          normOptions(item.options).forEach(o => {
+            const b = el('button', null, o.label); b.type = 'button';
+            b.setAttribute('aria-pressed', String(values[item.id] === o.value));
+            b.addEventListener('click', () => { set(o.value); update(o.value); });
+            btns.push([b, o.value]); seg.appendChild(b);
+          });
+          row.appendChild(label); row.appendChild(seg);
+          update = v => btns.forEach(([b, val]) => b.setAttribute('aria-pressed', String(val === v)));
+          break;
+        }
+        case 'colour': {
+          const input = el('input'); input.type = 'color'; input.id = id;
+          input.value = values[item.id] || '#000000';
+          input.addEventListener('input', () => set(input.value));
+          label.htmlFor = id;
+          row.classList.add('ctl-inline'); row.appendChild(label); row.appendChild(input);
+          update = v => { input.value = v; };
+          break;
+        }
+        case 'text': {
+          const input = el('input'); input.type = 'text'; input.id = id;
+          input.value = values[item.id] || '';
+          input.addEventListener('input', () => set(input.value));
+          label.htmlFor = id;
+          row.appendChild(label); row.appendChild(input);
+          update = v => { input.value = v; };
+          break;
+        }
+        case 'button': {
+          const b = el('button', 'btn' + (item.primary ? ' primary' : ''), item.label); b.type = 'button';
+          b.addEventListener('click', () => { if (onChange) onChange(item.id, true, values, item); });
+          row.appendChild(b);
+          break;
+        }
+        default:
+          row.appendChild(label);
+      }
+      groupFor(item.group).appendChild(row);
+      rows.push({ item, row, update });
+    });
+    refreshVisibility();
+
+    return {
+      values, root,
+      set(id, v, silent) {
+        const r = rows.find(x => x.item.id === id);
+        values[id] = v;
+        if (r) r.update(v);
+        refreshVisibility();
+        if (!silent && onChange && r) onChange(id, v, values, r.item);
+      },
+      setAll(obj, silent) { Object.keys(obj).forEach(k => this.set(k, obj[k], silent)); },
+      refresh: refreshVisibility
+    };
+  }
+  window.Controls = { build, el };
+})();
+
+</script>
+<script>
+// Design panel: every visual parameter as a live control, persisted per topic in localStorage.
+// Value precedence: schema defaults < baked (topics/<id>.design.js) < localStorage < URL ?design={...}
+(function () {
+  const KEY = id => 'sciAnim.design.' + id;
+  const el = Controls.el;
+
+  function defaults(schema) { const d = {}; schema.forEach(i => { if (i.default !== undefined) d[i.id] = i.default; }); return d; }
+  function load(id) { try { const s = localStorage.getItem(KEY(id)); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function save(id, v) { try { localStorage.setItem(KEY(id), JSON.stringify(v)); } catch (e) { /* private mode */ } }
+  function clear(id) { try { localStorage.removeItem(KEY(id)); } catch (e) { /* ignore */ } }
+  function diff(vals, base) { const d = {}; Object.keys(vals).forEach(k => { if (vals[k] !== base[k]) d[k] = vals[k]; }); return d; }
+  function extractJson(text) {
+    try { return JSON.parse(text); } catch (e) { /* fall through */ }
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a >= 0 && b > a) return JSON.parse(text.slice(a, b + 1));
+    throw new Error('No JSON object found');
+  }
+
+  function create(o) {
+    const base = Object.assign({}, defaults(o.schema), o.baked || {});
+    const stored = load(o.topicId) || {};
+    const init = Object.assign({}, base, stored, o.urlOverrides || {});
+
+    const tools = el('div', 'design-tools');
+    o.container.appendChild(tools);
+    const panel = Controls.build(o.container, o.schema, init, (id, v, vals) => {
+      save(o.topicId, diff(vals, base));
+      if (o.onChange) o.onChange(id, v, vals);
+    });
+
+    function exportText() {
+      const json = JSON.stringify(panel.values, null, 2);
+      return '// Design for topic "' + o.topicId + '". Drop this file into topics/ as ' + o.topicId + '.design.js\n' +
+        'window.TopicDesigns = window.TopicDesigns || {};\n' +
+        'window.TopicDesigns["' + o.topicId + '"] = ' + json + ';\n';
+    }
+    function applyJson(obj) {
+      const clean = {};
+      Object.keys(obj).forEach(k => { if (k in base) clean[k] = obj[k]; });
+      panel.setAll(Object.assign({}, base, clean), true);
+      save(o.topicId, diff(panel.values, base));
+      if (o.onChange) o.onChange('*', null, panel.values);
+    }
+
+    const exportBtn = el('button', 'btn', 'Export design'); exportBtn.type = 'button';
+    const importBtn = el('button', 'btn', 'Import design'); importBtn.type = 'button';
+    const pasteBtn = el('button', 'btn', 'Show as text'); pasteBtn.type = 'button';
+    const resetBtn = el('button', 'btn', 'Reset design'); resetBtn.type = 'button';
+    const file = el('input'); file.type = 'file'; file.accept = '.js,.json,text/plain'; file.hidden = true;
+    const ta = el('textarea'); ta.hidden = true; ta.spellcheck = false;
+    const taBtns = el('div', 'design-tools'); taBtns.hidden = true;
+    const applyBtn = el('button', 'btn primary', 'Apply text'); applyBtn.type = 'button';
+    const copyBtn = el('button', 'btn', 'Copy'); copyBtn.type = 'button';
+    taBtns.appendChild(applyBtn); taBtns.appendChild(copyBtn);
+    [exportBtn, importBtn, pasteBtn, resetBtn, file].forEach(b => tools.appendChild(b));
+    tools.appendChild(ta); tools.appendChild(taBtns);
+
+    exportBtn.addEventListener('click', () => {
+      const blob = new Blob([exportText()], { type: 'text/javascript' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = o.topicId + '.design.js';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    });
+    importBtn.addEventListener('click', () => file.click());
+    file.addEventListener('change', () => {
+      const f = file.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => { try { applyJson(extractJson(String(rd.result))); } catch (e) { alert('Could not read design file: ' + e.message); } };
+      rd.readAsText(f); file.value = '';
+    });
+    pasteBtn.addEventListener('click', () => {
+      const show = ta.hidden; ta.hidden = !show; taBtns.hidden = !show;
+      if (show) { ta.value = exportText(); }
+      pasteBtn.textContent = show ? 'Hide text' : 'Show as text';
+    });
+    applyBtn.addEventListener('click', () => { try { applyJson(extractJson(ta.value)); } catch (e) { alert('Could not read design text: ' + e.message); } });
+    copyBtn.addEventListener('click', () => {
+      ta.select(); ta.setSelectionRange(0, ta.value.length);
+      try { navigator.clipboard.writeText(ta.value); } catch (e) { document.execCommand('copy'); }
+    });
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('Reset all design settings for this topic?')) return;
+      clear(o.topicId); panel.setAll(base, true);
+      if (o.onChange) o.onChange('*', null, panel.values);
+    });
+
+    return {
+      get values() { return panel.values; },
+      set: panel.set, base, applyJson, exportText
+    };
+  }
+  window.Design = { create };
+})();
+
+</script>
+<script>
+// Question overlay shown over the canvas. Reusable by any topic.
+// Quiz.ask(overlayEl, question, done)
+//   question = { prompt, hint,
+//                options: [{label, correct}], multi,             single or multi choice
+//             or match: { left: [{label, answer}], right: [label] }   click a left item then a right item
+//             or typed: {placeholder, check(text), answer}  or  typed: { fields: [{label, placeholder, check, answer}] } }
+//   done(firstTryCorrect) is called when the student gets it right or reveals the answer.
+(function () {
+  const el = Controls.el;
+
+  // "SO_4^2-" -> HTML with <sub>/<sup>
+  function formulaHTML(str) {
+    let out = '', i = 0;
+    const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    str = String(str);
+    while (i < str.length) {
+      const ch = str[i];
+      if (ch === '_') { let j = i + 1, s = ''; while (j < str.length && /[0-9]/.test(str[j])) { s += str[j]; j++; } out += '<sub>' + s + '</sub>'; i = j; }
+      else if (ch === '^') { let j = i + 1, s = ''; while (j < str.length && !' ),.;:'.includes(str[j])) { s += str[j]; j++; } out += '<sup>' + esc(s.replace(/-/g, '−')) + '</sup>'; i = j; }
+      else { out += esc(ch); i++; }
+    }
+    return out;
+  }
+
+  function ask(overlay, q, done) {
+    let attempts = 0;
+
+    function render() {
+      overlay.innerHTML = '';
+      const wrap = el('div', 'q-overlay');
+      const card = el('div', 'q-card');
+      wrap.appendChild(card);
+      overlay.appendChild(wrap);
+      const prompt = el('div', 'q-prompt'); prompt.innerHTML = formulaHTML(q.prompt); card.appendChild(prompt);
+      if (q.hint) { const h = el('div', 'q-hint'); h.innerHTML = formulaHTML(q.hint); card.appendChild(h); }
+      const feedback = el('div', 'q-feedback');
+      const actions = el('div', 'q-actions');
+      let finished = false;
+      let reveal = () => {};
+
+      function finish(firstTry) {
+        if (finished) return; finished = true;
+        const btn = el('button', 'btn primary', 'Continue ›'); btn.type = 'button';
+        btn.addEventListener('click', () => { overlay.innerHTML = ''; done(firstTry); });
+        actions.innerHTML = ''; actions.appendChild(btn); btn.focus();
+      }
+      function wrong() {
+        attempts++;
+        feedback.textContent = attempts === 1 ? 'Not quite.' : 'Still not right.';
+        feedback.className = 'q-feedback bad';
+        actions.innerHTML = '';
+        const again = el('button', 'btn primary', 'Try again'); again.type = 'button';
+        again.addEventListener('click', render);
+        actions.appendChild(again);
+        if (attempts >= 2) {
+          const rv = el('button', 'btn', 'Show answer'); rv.type = 'button';
+          rv.addEventListener('click', () => { reveal(); finish(false); });
+          actions.appendChild(rv);
+        }
+        lock();
+      }
+      function right() {
+        feedback.textContent = attempts === 0 ? 'Correct!' : 'Correct.';
+        feedback.className = 'q-feedback good';
+        finish(attempts === 0);
+      }
+      let lock = () => { finished = true; };
+
+      if (q.options) {
+        const opts = el('div', 'q-opts');
+        const btns = [];
+        q.options.forEach(o => {
+          const b = el('button', 'q-opt'); b.type = 'button'; b.innerHTML = formulaHTML(o.label);
+          b.setAttribute('aria-pressed', 'false');
+          b.addEventListener('click', () => {
+            if (finished) return;
+            if (q.multi) { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); return; }
+            if (o.correct) { b.classList.add('right'); right(); } else { b.classList.add('wrong'); wrong(); }
+          });
+          btns.push({ b, o }); opts.appendChild(b);
+        });
+        card.appendChild(opts);
+        if (q.multi) {
+          const check = el('button', 'btn primary', 'Check answer'); check.type = 'button';
+          check.addEventListener('click', () => {
+            if (finished) return;
+            const ok = btns.every(x => (x.b.getAttribute('aria-pressed') === 'true') === !!x.o.correct);
+            if (ok) { btns.forEach(x => { if (x.o.correct) x.b.classList.add('right'); }); right(); }
+            else { btns.forEach(x => { if ((x.b.getAttribute('aria-pressed') === 'true') !== !!x.o.correct) x.b.classList.add('wrong'); }); wrong(); }
+          });
+          actions.appendChild(check);
+        }
+        reveal = () => btns.forEach(x => { x.b.classList.remove('wrong'); if (x.o.correct) x.b.classList.add('right'); x.b.setAttribute('aria-pressed', String(!!x.o.correct)); });
+      } else if (q.gaps) {
+        // sentences: arrays of text pieces where '' is a blank; answers: per-sentence arrays of words; bank: words to pick from
+        const G = q.gaps;
+        const fills = G.sentences.map(sn => sn.filter(x => x === '').map(() => null));
+        let sel = null;                          // { si, bi }
+        const blankBtns = [];
+        const box = el('div', 'q-gaps');
+        const firstEmpty = () => { for (let si = 0; si < fills.length; si++) for (let bi = 0; bi < fills[si].length; bi++) if (fills[si][bi] == null) return { si, bi }; return null; };
+        const paint = () => blankBtns.forEach(({ b, si, bi }) => {
+          b.textContent = fills[si][bi] == null ? '______' : fills[si][bi];
+          b.classList.toggle('filled', fills[si][bi] != null);
+          b.setAttribute('aria-pressed', String(sel && sel.si === si && sel.bi === bi));
+        });
+        G.sentences.forEach((sn, si) => {
+          const line = el('div', 'q-sentence');
+          let bi = 0;
+          sn.forEach(piece => {
+            if (piece === '') {
+              const b = el('button', 'q-blank'); b.type = 'button';
+              const myBi = bi++;
+              b.addEventListener('click', () => { if (finished) return; if (fills[si][myBi] != null) fills[si][myBi] = null; sel = { si, bi: myBi }; paint(); });
+              blankBtns.push({ b, si, bi: myBi }); line.appendChild(b);
+            } else { const sp = el('span'); sp.innerHTML = formulaHTML(piece) + ' '; line.appendChild(sp); }
+          });
+          box.appendChild(line);
+        });
+        const bank = el('div', 'q-opts q-bank');
+        G.bank.forEach(w => {
+          const b = el('button', 'q-opt'); b.type = 'button'; b.innerHTML = formulaHTML(w);
+          b.addEventListener('click', () => { if (finished) return; if (!sel) sel = firstEmpty(); if (!sel) return; fills[sel.si][sel.bi] = w; sel = firstEmpty(); paint(); });
+          bank.appendChild(b);
+        });
+        card.appendChild(box); card.appendChild(bank);
+        sel = firstEmpty(); paint();
+        const lines = () => box.querySelectorAll('.q-sentence');
+        const check = el('button', 'btn primary', 'Check answer'); check.type = 'button';
+        check.addEventListener('click', () => {
+          if (finished) return;
+          if (firstEmpty()) { feedback.textContent = 'Fill every gap first.'; feedback.className = 'q-feedback'; return; }
+          const key = a => a.join('|');
+          let ok = true;
+          if (G.unordered) {
+            const remaining = G.answers.map(key);
+            fills.forEach((f, si) => { const k = key(f); const idx = remaining.indexOf(k); if (idx >= 0) { remaining.splice(idx, 1); lines()[si].classList.add('right'); } else { ok = false; lines()[si].classList.add('wrong'); } });
+          } else {
+            fills.forEach((f, si) => { const good = key(f) === key(G.answers[si]); if (!good) ok = false; lines()[si].classList.add(good ? 'right' : 'wrong'); });
+          }
+          if (ok) right(); else wrong();
+        });
+        actions.appendChild(check);
+        reveal = () => { G.answers.forEach((a, si) => { fills[si] = a.slice(); }); sel = null; paint(); lines().forEach(l => { l.classList.remove('wrong'); l.classList.add('right'); }); };
+      } else if (q.match) {
+        const box = el('div', 'q-match');
+        const colL = el('div', 'q-col'), colR = el('div', 'q-col');
+        box.appendChild(colL); box.appendChild(colR); card.appendChild(box);
+        const assign = {};                       // left index -> right index
+        let sel = null;                          // { side, idx }
+        const lefts = [], rights = [];
+        const paint = () => {
+          lefts.forEach((b, i) => {
+            b.setAttribute('aria-pressed', String(sel && sel.side === 'L' && sel.idx === i));
+            b.innerHTML = formulaHTML(q.match.left[i].label) + (assign[i] != null ? '<span class="q-pair">→ ' + formulaHTML(q.match.right[assign[i]]) + '</span>' : '');
+          });
+          rights.forEach((b, j) => b.setAttribute('aria-pressed', String(sel && sel.side === 'R' && sel.idx === j)));
+        };
+        const pick = (side, idx) => {
+          if (finished) return;
+          if (sel && sel.side !== side) {
+            const li = side === 'L' ? idx : sel.idx, ri = side === 'R' ? idx : sel.idx;
+            assign[li] = ri; sel = null;
+            const nextFree = q.match.left.findIndex((x, i) => assign[i] == null);
+            if (nextFree >= 0) sel = { side: 'L', idx: nextFree };
+          } else sel = (sel && sel.side === side && sel.idx === idx) ? null : { side, idx };
+          paint();
+        };
+        q.match.left.forEach((it, i) => { const b = el('button', 'q-opt q-left'); b.type = 'button'; b.addEventListener('click', () => pick('L', i)); lefts.push(b); colL.appendChild(b); });
+        q.match.right.forEach((lab, j) => { const b = el('button', 'q-opt q-right'); b.type = 'button'; b.innerHTML = formulaHTML(lab); b.addEventListener('click', () => pick('R', j)); rights.push(b); colR.appendChild(b); });
+        sel = { side: 'L', idx: 0 }; paint();
+        const check = el('button', 'btn primary', 'Check answer'); check.type = 'button';
+        check.addEventListener('click', () => {
+          if (finished) return;
+          if (q.match.left.some((x, i) => assign[i] == null)) { feedback.textContent = 'Match every item on the left first: click an item, then click its partner.'; feedback.className = 'q-feedback'; return; }
+          const answerIdx = it => typeof it.answer === 'number' ? it.answer : q.match.right.indexOf(it.answer);
+          let ok = true;
+          q.match.left.forEach((it, i) => { const good = assign[i] === answerIdx(it); if (!good) ok = false; lefts[i].classList.add(good ? 'right' : 'wrong'); });
+          if (ok) right(); else wrong();
+        });
+        actions.appendChild(check);
+        reveal = () => { q.match.left.forEach((it, i) => { assign[i] = typeof it.answer === 'number' ? it.answer : q.match.right.indexOf(it.answer); }); sel = null; paint(); lefts.forEach(b => { b.classList.remove('wrong'); b.classList.add('right'); }); };
+      } else if (q.typed) {
+        const fields = q.typed.fields || [q.typed];
+        const inputs = [];
+        fields.forEach((f, i) => {
+          if (f.label) { const l = el('div', 'q-field-label'); l.innerHTML = formulaHTML(f.label); card.appendChild(l); }
+          const row = el('div', 'q-typed');
+          const input = el('input', 'q-input'); input.type = 'text'; input.placeholder = f.placeholder || 'Type your answer';
+          input.autocapitalize = 'off'; input.autocomplete = 'off'; input.spellcheck = false;
+          input.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') { if (i < fields.length - 1) inputs[i + 1].focus(); else go(); } });
+          row.appendChild(input); card.appendChild(row); inputs.push(input);
+        });
+        const go = () => {
+          if (finished) return;
+          let ok = true;
+          fields.forEach((f, i) => { const good = f.check(inputs[i].value); inputs[i].classList.add(good ? 'right' : 'wrong'); if (!good) ok = false; });
+          if (ok) right(); else wrong();
+        };
+        const check = el('button', 'btn primary', 'Check'); check.type = 'button';
+        check.addEventListener('click', go);
+        actions.appendChild(check);
+        setTimeout(() => inputs[0].focus(), 50);
+        reveal = () => { const a = el('div', 'q-answer'); a.innerHTML = fields.map(f => (f.label ? formulaHTML(f.label) + ': ' : 'Answer: ') + formulaHTML(f.answer)).join('<br>'); card.insertBefore(a, feedback); };
+      }
+      card.appendChild(feedback); card.appendChild(actions);
+    }
+    render();
+  }
+
+  window.Quiz = { ask, formulaHTML, close(overlay) { overlay.innerHTML = ''; } };
+})();
+
+</script>
+<script>
+// URL parameters and a postMessage API for embedding in another site.
+//   ?topic=electrolysis&preset=brine&mode=embed&power=1&labels=name
+//   mode=embed  hides header and design panel (also the default inside an iframe)
+//   mode=full   forces the full UI even inside an iframe
+//   controls=0  hides the teaching panel too
+//   designer=1  shows the design panel in embed mode
+//   design={"colour.background":"#000"}   JSON design overrides
+//   autoplay=0  start paused
+(function () {
+  const params = new URLSearchParams(location.search);
+  const inFrame = window.self !== window.top;
+  const Embed = {
+    params,
+    get mode() { return params.get('mode') || (inFrame ? 'embed' : 'full'); },
+    get isEmbed() { return this.mode === 'embed'; },
+    flag(name, def) {
+      if (!params.has(name)) return def;
+      return ['1', 'true', 'on', 'yes'].includes(params.get(name).toLowerCase());
+    },
+    designOverrides() {
+      const raw = params.get('design'); if (!raw) return {};
+      try { return JSON.parse(raw); } catch (e) { console.warn('Bad design param', e); return {}; }
+    },
+    controlOverrides(schema) {
+      const out = {};
+      schema.forEach(item => {
+        if (!params.has(item.id)) return;
+        const raw = params.get(item.id);
+        if (item.type === 'toggle') out[item.id] = ['1', 'true', 'on', 'yes'].includes(raw.toLowerCase());
+        else if (item.type === 'range') out[item.id] = parseFloat(raw);
+        else if (item.type !== 'button') out[item.id] = raw;
+      });
+      return out;
+    },
+    listen(app) {
+      window.addEventListener('message', ev => {
+        const m = ev.data;
+        if (!m || typeof m !== 'object' || !m.cmd) return;
+        switch (m.cmd) {
+          case 'preset': app.setPreset(m.id); break;
+          case 'control': app.setControl(m.id, m.value); break;
+          case 'play': app.engine.play(); break;
+          case 'pause': app.engine.pause(); break;
+          case 'step': app.engine.step(); break;
+          case 'reset': app.reset(); break;
+          case 'speed': app.engine.setSpeed(Number(m.value) || 1); break;
+          case 'design': app.design.applyJson(m.values || {}); break;
+        }
+      });
+    },
+    notify(event, data) {
+      if (!inFrame) return;
+      try { window.parent.postMessage(Object.assign({ source: 'science-animations', event }, data || {}), '*'); } catch (e) { /* ignore */ }
+    }
+  };
+  window.Embed = Embed;
+})();
+
+</script>
+<script>
+// App shell: builds the page around a topic, wires engine, panels, embed and keyboard.
+(function () {
+  const el = Controls.el;
+
+  function start(opts) {
+    const topic = Topics.get(opts.topicId);
+    const root = opts.root;
+    root.innerHTML = '';
+    const embed = Embed.isEmbed;
+    document.body.classList.toggle('embed', embed);
+    document.title = topic.title + ' · Science Animations';
+
+    // Header
+    const header = el('header', 'app-header');
+    if (!embed && Topics.list().length > 1) {
+      const back = el('a', 'app-back', '‹ Topics'); back.href = location.pathname; header.appendChild(back);
+    }
+    header.appendChild(el('h1', 'app-title', topic.title));
+    const focusBtn = el('button', 'btn app-focus', 'Focus'); focusBtn.type = 'button';
+    if (!embed) header.appendChild(focusBtn);
+    root.appendChild(header);
+
+    // Stage
+    const stage = el('div', 'stage');
+    root.appendChild(stage);
+    const canvas = SimCanvas.create(stage, { aspect: topic.aspect || 0.64 });
+    const overlay = el('div', 'stage-overlay');
+    stage.appendChild(overlay);
+    const g = SimCanvas.G(canvas);
+
+    // Transport
+    const transport = el('div', 'transport');
+    const playBtn = el('button', 'btn primary', 'Pause'); playBtn.type = 'button';
+    const stepBtn = el('button', 'btn', 'Step'); stepBtn.type = 'button';
+    const resetBtn = el('button', 'btn', 'Reset'); resetBtn.type = 'button';
+    const speedWrap = el('label', 'speed');
+    speedWrap.appendChild(el('span', null, 'Speed'));
+    const speed = el('input'); speed.type = 'range'; speed.min = 0.25; speed.max = 3; speed.step = 0.25; speed.value = 1;
+    const speedOut = el('output', 'ctl-value', '1×');
+    speedWrap.appendChild(speed); speedWrap.appendChild(speedOut);
+    [playBtn, stepBtn, resetBtn, speedWrap].forEach(b => transport.appendChild(b));
+    root.appendChild(transport);
+
+    // Panels
+    const teachPanel = el('details', 'panel panel-teach');
+    teachPanel.appendChild(el('summary', null, 'Teaching controls'));
+    const teachBody = el('div', 'panel-body'); teachPanel.appendChild(teachBody);
+    teachPanel.open = !embed;
+    if (embed && !Embed.flag('controls', true)) teachPanel.hidden = true;
+    root.appendChild(teachPanel);
+
+    const designPanel = el('details', 'panel panel-design');
+    designPanel.appendChild(el('summary', null, 'Design (colours, sizes, text)'));
+    const designBody = el('div', 'panel-body'); designPanel.appendChild(designBody);
+    if (embed && !Embed.flag('designer', false)) designPanel.hidden = true;
+    root.appendChild(designPanel);
+
+    // Design values
+    const baked = (window.TopicDesigns && window.TopicDesigns[topic.id]) || {};
+    const design = Design.create({
+      topicId: topic.id, schema: topic.designSchema || [], baked,
+      urlOverrides: Embed.designOverrides(), container: designBody,
+      onChange: () => { if (sim && sim.onDesignChange) sim.onDesignChange(); }
+    });
+
+    // Teaching controls
+    let sim = null;
+    const controlInit = Embed.controlOverrides(topic.controls || []);
+    const presetParam = Embed.params.get('preset');
+    if (presetParam && topic.presets.some(p => p.id === presetParam)) controlInit.preset = presetParam;
+    const controls = Controls.build(teachBody, topic.controls || [], controlInit, (id, v, values, item) => {
+      if (!sim) return;
+      if (id === 'preset') sim.reset(v);
+      else if (item && item.type === 'button') sim.action(id);
+      else if (sim.onControl) sim.onControl(id, v);
+      Embed.notify('control', { id, value: v });
+    });
+
+    sim = topic.create({ g, canvas, controls, design, overlay });
+    const engine = Engine.create({ update: dt => sim.update(dt), draw: () => sim.draw() });
+    sim.reset(controls.values.preset || (topic.presets[0] && topic.presets[0].id));
+
+    function syncPlay() { playBtn.textContent = engine.playing ? 'Pause' : 'Play'; }
+    engine.onChange = syncPlay;
+    playBtn.addEventListener('click', () => { engine.toggle(); });
+    stepBtn.addEventListener('click', () => { engine.step(); });
+    function reset() {
+      if (topic.resetControls) topic.resetControls(controls);
+      sim.reset(controls.values.preset);
+    }
+    resetBtn.addEventListener('click', reset);
+    speed.addEventListener('input', () => { engine.setSpeed(parseFloat(speed.value)); speedOut.textContent = speed.value + '×'; });
+
+    // Focus mode: hide chrome, try fullscreen
+    focusBtn.addEventListener('click', () => {
+      const on = document.body.classList.toggle('focus');
+      focusBtn.textContent = on ? 'Exit focus' : 'Focus';
+      teachPanel.open = !on;
+      try {
+        if (on && root.requestFullscreen) root.requestFullscreen();
+        else if (on && root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+        else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+      } catch (e) { /* not supported */ }
+      setTimeout(canvas.resize, 50);
+    });
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && document.body.classList.contains('focus')) {
+        document.body.classList.remove('focus'); focusBtn.textContent = 'Focus'; teachPanel.open = true;
+      }
+      setTimeout(canvas.resize, 50);
+    });
+
+    // Keyboard (desktop convenience)
+    document.addEventListener('keydown', ev => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if (overlay.childElementCount) return;
+      if (ev.key === ' ') { ev.preventDefault(); engine.toggle(); }
+      else if (ev.key === 'ArrowRight') { engine.step(); }
+      else if (ev.key.toLowerCase() === 'r') { reset(); }
+      else if (ev.key.toLowerCase() === 'p' && controls.values.power !== undefined) { controls.set('power', !controls.values.power); }
+      else if (ev.key.toLowerCase() === 'n' && sim.action) { sim.action('next'); }
+      else if (ev.key.toLowerCase() === 'b' && sim.action) { sim.action('back'); }
+    });
+
+    engine.start();
+    if (Embed.flag('autoplay', true)) engine.play();
+    syncPlay();
+
+    const app = {
+      topic, engine, controls, design, sim, reset,
+      setPreset(id) { controls.set('preset', id); },
+      setControl(id, v) { controls.set(id, v); }
+    };
+    Embed.listen(app);
+    Embed.notify('ready', { topic: topic.id });
+    window.app = app;
+    return app;
+  }
+
+  function launcher(root) {
+    root.innerHTML = '';
+    const header = el('header', 'app-header');
+    header.appendChild(el('h1', 'app-title', 'Science Animations'));
+    root.appendChild(header);
+    const list = el('div', 'launcher');
+    Topics.list().forEach(t => {
+      const a = el('a', 'launch-card');
+      a.href = '?topic=' + encodeURIComponent(t.id);
+      a.appendChild(el('div', 'launch-title', t.title));
+      if (t.description) a.appendChild(el('div', 'launch-desc', t.description));
+      list.appendChild(a);
+    });
+    root.appendChild(list);
+  }
+
+  function registerSW() {
+    if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+    navigator.serviceWorker.register('sw.js').catch(() => { /* optional */ });
+  }
+
+  function boot(root) {
+    const list = Topics.list();
+    const id = Embed.params.get('topic') || window.DEFAULT_TOPIC || (list.length === 1 ? list[0].id : null);
+    if (id && Topics.get(id)) start({ topicId: id, root });
+    else launcher(root);
+    registerSW();
+  }
+
+  window.App = { start, launcher, boot };
+})();
+
+</script>
+<script>
+// Electrolysis (GCSE). Presets are data; a small rules engine decides the products.
+(function () {
+  'use strict';
+  const P = Particles;
+  const REACTIVITY = ['K', 'Na', 'Ca', 'Mg', 'Al', 'Zn', 'Fe', 'H', 'Cu', 'Ag', 'Au'];
+
+  // ---------------------------------------------------------------- species
+  const SPECIES = {
+    'Pb2+': { formula: 'Pb^2+', name: 'lead ion', charge: 2, element: 'Pb', colour: '#64748b', radius: 1.25,
+      product: { formula: 'Pb', name: 'lead', type: 'metal', colour: '#9ca3af', n: 1, eq: 'Pb^2+ + 2e^- → Pb' } },
+    'Na+': { formula: 'Na^+', name: 'sodium ion', charge: 1, element: 'Na', colour: '#7c3aed', radius: 1.0,
+      product: { formula: 'Na', name: 'sodium', type: 'metal', colour: '#c4b5fd', n: 1, eq: 'Na^+ + e^- → Na' } },
+    'Al3+': { formula: 'Al^3+', name: 'aluminium ion', charge: 3, element: 'Al', colour: '#0284c7', radius: 0.9,
+      product: { formula: 'Al', name: 'aluminium', type: 'metal', colour: '#bae6fd', n: 1, eq: 'Al^3+ + 3e^- → Al' } },
+    'Cu2+': { formula: 'Cu^2+', name: 'copper ion', charge: 2, element: 'Cu', colour: '#2563eb', radius: 1.1,
+      product: { formula: 'Cu', name: 'copper', type: 'metal', colour: '#ea580c', n: 1, eq: 'Cu^2+ + 2e^- → Cu' } },
+    'H+': { formula: 'H^+', name: 'hydrogen ion', charge: 1, element: 'H', colour: '#e11d48', radius: 0.7,
+      product: { formula: 'H_2', name: 'hydrogen', type: 'gas', colour: '#fecdd3', n: 2, eq: '2H^+ + 2e^- → H_2' } },
+    'Br-': { formula: 'Br^-', name: 'bromide ion', charge: -1, colour: '#ea580c', radius: 1.3, halide: true,
+      product: { formula: 'Br_2', name: 'bromine', type: 'gas', colour: '#b45309', n: 2, eq: '2Br^- → Br_2 + 2e^-', vapour: true } },
+    'Cl-': { formula: 'Cl^-', name: 'chloride ion', charge: -1, colour: '#16a34a', radius: 1.2, halide: true,
+      product: { formula: 'Cl_2', name: 'chlorine', type: 'gas', colour: '#bbf7d0', n: 2, eq: '2Cl^- → Cl_2 + 2e^-' } },
+    'O2-': { formula: 'O^2-', name: 'oxide ion', charge: -2, colour: '#dc2626', radius: 1.15,
+      product: { formula: 'O_2', name: 'oxygen', type: 'gas', colour: '#fecaca', n: 2, eq: '2O^2- → O_2 + 4e^-' } },
+    'OH-': { formula: 'OH^-', name: 'hydroxide ion', charge: -1, colour: '#0d9488', radius: 0.9,
+      product: { formula: 'O_2', name: 'oxygen', type: 'gas', colour: '#ccfbf1', n: 4, eq: '4OH^- → O_2 + 2H_2O + 4e^-' } },
+    'SO42-': { formula: 'SO_4^2-', name: 'sulfate ion', charge: -2, colour: '#a16207', radius: 1.45, spectator: true }
+  };
+  const COPPER_ANODE = { formula: 'Cu', name: 'copper', type: 'dissolve', colour: '#c2410c', eq: 'Cu → Cu^2+ + 2e^-' };
+  // What a student would see, smell or hear for each product. keys = product formula
+  const OBS = {
+    'Pb': { text: 'silvery-grey molten metal (lead) collects at the cathode', short: 'silvery-grey metal collects', icons: ['👀 silvery-grey metal'], match: /silver|grey|gray|metal|solid|liquid|lead/ },
+    'Na': { text: 'silvery metal (sodium) collects at the cathode', short: 'silvery metal collects', icons: ['👀 silvery metal'], match: /silver|grey|gray|metal|solid|liquid|sodium/ },
+    'Al': { text: 'silvery metal (aluminium) collects at the cathode', short: 'silvery metal collects', icons: ['👀 silvery metal'], match: /silver|grey|gray|metal|solid|liquid|alumin/ },
+    'Cu': { text: 'a pink-brown coating of copper builds up on the cathode', short: 'pink-brown coating forms', icons: ['👀 pink-brown coating'], match: /pink|brown|orange|coat|copper|solid|layer/ },
+    'H_2': { text: 'bubbles of colourless gas (hydrogen) at the cathode; the gas gives a squeaky pop with a lit splint', short: 'bubbles of colourless gas, squeaky pop with a lit splint', icons: ['👀 colourless bubbles', '🔊 squeaky pop (lit splint)'], match: /bubbl|colourless|colorless|squeak|pop|hydrogen|gas|fizz/ },
+    'Br_2': { text: 'brown-orange vapour (bromine) with a sharp smell at the anode', short: 'brown-orange vapour with a sharp smell', icons: ['👀 brown-orange vapour', '👃 sharp smell'], match: /brown|orange|vapour|vapor|smell|bromine|fume/ },
+    'Cl_2': { text: 'bubbles of pale green gas (chlorine) with a sharp bleach-like smell at the anode; it bleaches damp litmus paper', short: 'bubbles of pale green gas, bleach-like smell', icons: ['👀 pale green gas', '👃 bleach-like smell'], match: /green|bleach|smell|chlorine|litmus|gas/ },
+    'O_2': { text: 'bubbles of colourless gas (oxygen) at the anode; the gas relights a glowing splint', short: 'bubbles of colourless gas, relights a glowing splint', icons: ['👀 colourless bubbles', '🔥 relights glowing splint'], match: /bubbl|colourless|colorless|relight|glowing|splint|oxygen|gas|fizz/ },
+    'dissolve': { text: 'the copper anode gets smaller and thinner as it dissolves', short: 'anode gets smaller and thinner', icons: ['👀 anode gets smaller'], match: /small|thin|dissolv|shrink|wear|lighter|loses mass|mass/ }
+  };
+  const OBS_POOL = ['Pb', 'Cu', 'H_2', 'Br_2', 'Cl_2', 'O_2', 'dissolve'];
+
+  // ---------------------------------------------------------------- presets
+  const PRESETS = [
+    { id: 'molten-pbbr2', title: 'Molten lead(II) bromide', formula: 'PbBr_2(l)', state: 'molten', ions: { 'Pb2+': 1, 'Br-': 2 }, electrodes: 'graphite',
+      note: 'Solid ionic compounds do not conduct. Melting frees the ions to move.' },
+    { id: 'molten-nacl', title: 'Molten sodium chloride', formula: 'NaCl(l)', state: 'molten', ions: { 'Na+': 1, 'Cl-': 1 }, electrodes: 'graphite' },
+    { id: 'molten-al2o3', title: 'Molten aluminium oxide', formula: 'Al_2O_3(l)', state: 'molten', ions: { 'Al3+': 2, 'O2-': 3 }, electrodes: 'graphite',
+      note: 'Dissolved in cryolite to lower the melting point. The graphite anode burns away in the oxygen.' },
+    { id: 'brine', title: 'Concentrated sodium chloride solution (brine)', formula: 'NaCl(aq)', state: 'aqueous', ions: { 'Na+': 1, 'Cl-': 1 }, electrodes: 'graphite',
+      note: 'Sodium is more reactive than hydrogen, so hydrogen forms. Plenty of chloride ions, so chlorine forms at the anode. Sodium hydroxide is left in solution.' },
+    { id: 'dilute-nacl', title: 'Dilute sodium chloride solution', formula: 'NaCl(aq)', state: 'aqueous', ions: { 'Na+': 1, 'Cl-': 1 }, electrodes: 'graphite', dilute: true,
+      note: 'Too few chloride ions: hydroxide from water is discharged instead, so oxygen forms at the anode. Hydrogen at the cathode.' },
+    { id: 'cuso4-inert', title: 'Copper(II) sulfate solution, inert electrodes', formula: 'CuSO_4(aq)', state: 'aqueous', ions: { 'Cu2+': 1, 'SO42-': 1 }, electrodes: 'graphite', liquid: '#3b82f6', fades: true,
+      note: 'Copper is less reactive than hydrogen, so copper forms. Sulfate stays in solution; oxygen forms from hydroxide.' },
+    { id: 'cuso4-copper', title: 'Copper(II) sulfate solution, copper electrodes', formula: 'CuSO_4(aq)', state: 'aqueous', ions: { 'Cu2+': 1, 'SO42-': 1 }, electrodes: 'copper', liquid: '#3b82f6',
+      note: 'The anode dissolves and the cathode gains copper. Used to purify copper.' },
+    { id: 'dilute-h2so4', title: 'Dilute sulfuric acid', formula: 'H_2SO_4(aq)', state: 'aqueous', ions: { 'H+': 2, 'SO42-': 1 }, electrodes: 'graphite',
+      note: 'Hydrogen at the cathode, oxygen at the anode: water is split, twice as much hydrogen as oxygen.' }
+  ];
+  const PRESET_BY_ID = {};
+  PRESETS.forEach(p => { PRESET_BY_ID[p.id] = p; });
+
+  // ---------------------------------------------------------------- rules
+  function rules(preset) {
+    const keys = Object.keys(preset.ions);
+    const aqueous = preset.state === 'aqueous';
+    const cations = keys.filter(k => SPECIES[k].charge > 0);
+    const anions = keys.filter(k => SPECIES[k].charge < 0);
+    let cathode;
+    if (!aqueous) cathode = cations[0];
+    else {
+      const metal = cations.find(k => {
+        const e = SPECIES[k].element;
+        return e !== 'H' && REACTIVITY.indexOf(e) > REACTIVITY.indexOf('H');
+      });
+      cathode = metal || 'H+';
+    }
+    let anode = null, anodeDissolves = false;
+    if (aqueous && preset.electrodes === 'copper') anodeDissolves = true;
+    else {
+      const halide = preset.dilute ? null : anions.find(k => SPECIES[k].halide);
+      if (halide) anode = halide;
+      else if (!aqueous) anode = anions.find(k => !SPECIES[k].spectator);
+      else anode = 'OH-';
+    }
+    return { cathode, anode, anodeDissolves, aqueous };
+  }
+
+  // ---------------------------------------------------------------- schemas
+  const FONTS = ['system-ui', 'Helvetica Neue', 'Arial', 'Arial Rounded MT Bold', 'Verdana', 'Trebuchet MS', 'Georgia', 'Chalkboard SE', 'Comic Sans MS', 'Courier New'];
+  const designSchema = [
+    { id: 'colour.background', type: 'colour', label: 'Background', default: '#ffffff', group: 'Colours' },
+    { id: 'colour.liquidMolten', type: 'colour', label: 'Molten electrolyte', default: '#fef3c7', group: 'Colours' },
+    { id: 'colour.liquidAqueous', type: 'colour', label: 'Aqueous electrolyte', default: '#e0f2fe', group: 'Colours' },
+    { id: 'colour.usePresetLiquid', type: 'toggle', label: 'Preset liquid colours (e.g. blue CuSO₄)', default: true, group: 'Colours' },
+    { id: 'colour.glass', type: 'colour', label: 'Beaker outline', default: '#94a3b8', group: 'Colours' },
+    { id: 'colour.graphite', type: 'colour', label: 'Graphite electrode', default: '#334155', group: 'Colours' },
+    { id: 'colour.copper', type: 'colour', label: 'Copper electrode', default: '#c2410c', group: 'Colours' },
+    { id: 'colour.wire', type: 'colour', label: 'Wires', default: '#475569', group: 'Colours' },
+    { id: 'colour.electron', type: 'colour', label: 'Electrons', default: '#eab308', group: 'Colours' },
+    { id: 'colour.text', type: 'colour', label: 'Text', default: '#0f172a', group: 'Colours' },
+    { id: 'colour.water', type: 'colour', label: 'Water molecules', default: '#60a5fa', group: 'Colours' },
+    { id: 'ion.radius', type: 'range', label: 'Ion size', min: 8, max: 28, step: 1, default: 15, unit: 'px', group: 'Ions' },
+    { id: 'ion.outline', type: 'toggle', label: 'Outline ions', default: true, group: 'Ions' },
+    { id: 'ion.nameSize', type: 'range', label: 'Ion name text size', min: 0.4, max: 1.2, step: 0.05, default: 0.7, group: 'Ions' }
+  ];
+  Object.keys(SPECIES).forEach(k => {
+    const sp = SPECIES[k];
+    designSchema.push({ id: 'ion.' + k + '.colour', type: 'colour', label: sp.name, default: sp.colour, group: 'Ion colours' });
+    designSchema.push({ id: 'ion.' + k + '.radius', type: 'range', label: sp.name, min: 0.5, max: 2, step: 0.05, default: sp.radius, group: 'Ion sizes' });
+    if (sp.product) designSchema.push({ id: 'product.' + k + '.colour', type: 'colour', label: sp.product.name + ' (from ' + sp.name + ')', default: sp.product.colour, group: 'Product colours' });
+  });
+  designSchema.push(
+    { id: 'motion.count', type: 'range', label: 'Number of ions', min: 6, max: 60, step: 2, default: 24, group: 'Motion' },
+    { id: 'motion.jitter', type: 'range', label: 'Random wobble', min: 0, max: 3, step: 0.1, default: 1, group: 'Motion' },
+    { id: 'motion.drift', type: 'range', label: 'Drift speed (power on)', min: 0.2, max: 3, step: 0.1, default: 1, group: 'Motion' },
+    { id: 'motion.discharge', type: 'range', label: 'Discharge animation time', min: 0.2, max: 2, step: 0.1, default: 0.8, unit: 's', group: 'Motion' },
+    { id: 'motion.bubbleSpeed', type: 'range', label: 'Bubble rise speed', min: 0.3, max: 3, step: 0.1, default: 1, group: 'Motion' },
+    { id: 'motion.bubbleSize', type: 'range', label: 'Bubble size', min: 0.5, max: 2, step: 0.1, default: 1, group: 'Motion' },
+    { id: 'motion.electronSpeed', type: 'range', label: 'Electron speed in wires', min: 0.2, max: 3, step: 0.1, default: 1, group: 'Motion' },
+    { id: 'motion.electronSize', type: 'range', label: 'Electron size', min: 0.5, max: 3, step: 0.1, default: 1, group: 'Motion' },
+    { id: 'motion.water', type: 'range', label: 'Water molecules shown', min: 0, max: 30, step: 1, default: 10, group: 'Motion' },
+    { id: 'text.font', type: 'select', label: 'Font', options: FONTS, default: 'system-ui', group: 'Text' },
+    { id: 'text.size', type: 'range', label: 'Text size', min: 10, max: 26, step: 1, default: 15, unit: 'px', group: 'Text' },
+    { id: 'text.equationSize', type: 'range', label: 'Half-equation size', min: 12, max: 32, step: 1, default: 19, unit: 'px', group: 'Text' },
+    { id: 'text.electrodeNames', type: 'segmented', label: 'Electrode names', options: [{ value: 'symbols', label: 'cathode (−)' }, { value: 'words', label: 'negative electrode' }, { value: 'both', label: 'Both' }], default: 'symbols', group: 'Text' },
+    { id: 'text.flowText', type: 'segmented', label: 'Flow diagram text', options: [{ value: 'short', label: 'Short' }, { value: 'full', label: 'Full sentences' }], default: 'short', group: 'Text' },
+    { id: 'text.flowSize', type: 'range', label: 'Flow diagram text size', min: 8, max: 20, step: 1, default: 13, unit: 'px', group: 'Text' },
+    { id: 'text.showTitle', type: 'toggle', label: 'Show title', default: true, group: 'Text' },
+    { id: 'text.showNote', type: 'toggle', label: 'Show teaching note', default: true, group: 'Text' },
+    { id: 'text.showCounters', type: 'toggle', label: 'Show product counters', default: true, group: 'Text' },
+    { id: 'text.showProductLabels', type: 'toggle', label: 'Show product labels', default: true, group: 'Text' },
+    { id: 'text.showElectrodeLabels', type: 'toggle', label: 'Show electrode labels', default: true, group: 'Text' },
+    { id: 'layout.cathodeSide', type: 'segmented', label: 'Cathode side', options: ['left', 'right'], default: 'left', group: 'Layout' },
+    { id: 'layout.electrodeWidth', type: 'range', label: 'Electrode width', min: 0.02, max: 0.08, step: 0.005, default: 0.04, group: 'Layout' },
+    { id: 'layout.beakerWidth', type: 'range', label: 'Beaker width (free mode)', min: 0.5, max: 0.9, step: 0.02, default: 0.72, group: 'Layout' },
+    { id: 'layout.beakerWidthSteps', type: 'range', label: 'Beaker width (step mode)', min: 0.36, max: 0.7, step: 0.02, default: 0.5, group: 'Layout' },
+    { id: 'layout.glow', type: 'toggle', label: 'Glow when ions discharge', default: true, group: 'Layout' },
+    { id: 'layout.showSupply', type: 'toggle', label: 'Show power supply and wires', default: true, group: 'Layout' }
+  );
+
+  const controls = [
+    { id: 'preset', type: 'select', label: 'Electrolyte', options: PRESETS.map(p => ({ value: p.id, label: p.title })), default: 'molten-pbbr2' },
+    { id: 'guide', type: 'segmented', label: 'Mode', options: [{ value: 'steps', label: 'Step by step' }, { value: 'study', label: 'Study (questions)' }, { value: 'free', label: 'Free running' }], default: 'steps' },
+    { id: 'difficulty', type: 'segmented', label: 'Question difficulty', options: [{ value: 'easy', label: 'Easy' }, { value: 'medium', label: 'Medium' }, { value: 'hard', label: 'Hard (type answers)' }], default: 'easy', showIf: v => v.guide === 'study' },
+    { id: 'electrodes', type: 'segmented', label: 'Electrodes', options: [{ value: 'one', label: 'One at a time' }, { value: 'both', label: 'Both together' }], default: 'one', showIf: v => v.guide !== 'free' },
+    { id: 'next', type: 'button', label: 'Next step ›', primary: true, showIf: v => v.guide !== 'free' },
+    { id: 'back', type: 'button', label: '‹ Back', showIf: v => v.guide !== 'free' },
+    { id: 'power', type: 'toggle', label: 'Power on', default: false, showIf: v => v.guide === 'free' },
+    { id: 'labels', type: 'segmented', label: 'Ion labels', options: ['formula', 'name', 'both', 'none'], default: 'formula' },
+    { id: 'electrons', type: 'toggle', label: 'Show electron flow in wires', default: true, showIf: v => v.guide === 'free' },
+    { id: 'equations', type: 'segmented', label: 'Half-equations', options: [{ value: 'auto', label: 'When it happens' }, { value: 'always', label: 'Always' }, { value: 'off', label: 'Off' }], default: 'auto', showIf: v => v.guide === 'free' },
+    { id: 'water', type: 'toggle', label: 'Show water molecules', default: true, showIf: v => PRESET_BY_ID[v.preset] && PRESET_BY_ID[v.preset].state === 'aqueous' },
+    { id: 'replenish', type: 'toggle', label: 'Replenish electrolyte ions (H⁺/OH⁻ from water always return)', default: true },
+    { id: 'predict', type: 'toggle', label: 'Predict the products (hide until revealed)', default: false, showIf: v => v.guide === 'free' },
+    { id: 'reveal', type: 'button', label: 'Reveal products', primary: true, showIf: v => v.guide === 'free' && v.predict }
+  ];
+
+  // ---------------------------------------------------------------- simulation
+  function create(ctx) {
+    const g = ctx.g;
+    let preset, R, aqueous, ions, bubbles, deposits, counts, pending, gasCloud, shownEq, revealed, time, dissolved, anodeTimer, electronPhase, waters, flashes, owed = {}, refilling = {}, refillTimer = 0;
+    let charge = 0;                       // electrons released at anode minus electrons taken at cathode
+    const SLACK = 10;
+    let steps = [], storyStep = 0, btnRects = {}, startCations = 0;
+    const isStory = () => C().guide !== 'free';
+    const isStudy = () => C().guide === 'study';
+    let asked = {}, score = { right: 0, total: 0 };
+    const flags = () => (isStory() && steps[storyStep]) ? steps[storyStep].flags : null;
+
+    const C = () => ctx.controls.values;
+    const D = () => ctx.design.values;
+    const ionR = p => D()['ion.radius'] * D()['ion.' + p.k + '.radius'] * (g.w / 800);
+    const productColour = k => D()['product.' + k + '.colour'] || SPECIES[k].product.colour;
+
+    function layout() {
+      const d = D(), w = g.w, h = g.h, s = w / 800;
+      const story = isStory();
+      const bw = w * (story ? d['layout.beakerWidthSteps'] : d['layout.beakerWidth']);
+      const beaker = { x: (w - bw) / 2, y: h * 0.31, w: bw, h: h * 0.54 };
+      const flowTop = h * 0.25, flowBottom = h * 0.84, m = w * 0.015;
+      const flowLeft = { x: m, y: flowTop, w: beaker.x - 2 * m, h: flowBottom - flowTop };
+      const flowRight = { x: beaker.x + beaker.w + m, y: flowTop, w: w - (beaker.x + beaker.w) - 2 * m, h: flowBottom - flowTop };
+      const liquid = { x: beaker.x, y: beaker.y + beaker.h * 0.2, w: beaker.w, h: beaker.h * 0.8 };
+      const ew = w * d['layout.electrodeWidth'];
+      const left = beaker.x + beaker.w * 0.25, right = beaker.x + beaker.w * 0.75;
+      const cathX = d['layout.cathodeSide'] === 'right' ? right : left;
+      const anX = cathX === left ? right : left;
+      const eTop = h * 0.255, eBot = liquid.y + liquid.h * 0.7;
+      const anodeW = ew * (1 - Math.min(0.6, dissolved * 0.02));
+      const cathLeft = cathX === left;
+      return {
+        s, beaker, liquid,
+        flow: { cathode: cathLeft ? flowLeft : flowRight, anode: cathLeft ? flowRight : flowLeft },
+        supply: { x: w / 2 - w * 0.085, y: h * 0.135, w: w * 0.17, h: h * 0.075 },
+        cathode: { x: cathX - ew / 2, y: eTop, w: ew, h: eBot - eTop, cx: cathX, name: 'cathode', side: cathX === left ? -1 : 1 },
+        anode: { x: anX - anodeW / 2, y: eTop, w: anodeW, h: eBot - eTop, cx: anX, name: 'anode', side: anX === left ? -1 : 1 },
+        eqY: h * 0.91, counterY: h * 0.968
+      };
+    }
+    const px = (p, L) => [L.liquid.x + p.u * L.liquid.w, L.liquid.y + p.v * L.liquid.h];
+    const setPx = (p, x, y, L) => { p.u = (x - L.liquid.x) / L.liquid.w; p.v = (y - L.liquid.y) / L.liquid.h; };
+
+    function newIon(k, fromWater, at) {
+      let u = P.rand(0.04, 0.96);
+      // keep clear of the electrodes at u = 0.25 and 0.75
+      let tries = 0;
+      while ((Math.abs(u - 0.25) < 0.08 || Math.abs(u - 0.75) < 0.08) && tries++ < 20) u = P.rand(0.04, 0.96);
+      return { k, sp: SPECIES[k], u: at ? at.u : u, v: at ? at.v : P.rand(0.06, 0.94), vx: 0, vy: 0, state: 'free', t: 0, water: !!fromWater, side: 0 };
+    }
+    function populate() {
+      const total = D()['motion.count'];
+      const entries = Object.entries(preset.ions);
+      const sum = entries.reduce((a, [, r]) => a + r, 0);
+      const dilute = preset.dilute ? 0.4 : 1;
+      entries.forEach(([k, ratio]) => {
+        const n = Math.max(1, Math.round(total * ratio * dilute / sum));
+        for (let i = 0; i < n; i++) ions.push(newIon(k));
+      });
+      if (aqueous) ['H+', 'OH-'].forEach(k => { if (!preset.ions[k]) for (let i = 0; i < (preset.dilute ? 10 : 6); i++) ions.push(newIon(k, true)); });
+    }
+
+    function reset(id) {
+      preset = PRESET_BY_ID[id] || PRESETS[0];
+      R = rules(preset);
+      aqueous = preset.state === 'aqueous';
+      steps = buildStory(); storyStep = 0;
+      asked = {}; score = { right: 0, total: 0 };
+      Quiz.close(ctx.overlay);
+      resetState();
+    }
+    function resetState() {
+      ions = []; bubbles = []; flashes = [];
+      deposits = { cathode: [], anode: [] };
+      counts = { cathode: 0, anode: 0 };
+      pending = { cathode: 0, anode: 0 };
+      gasCloud = { cathode: 0, anode: 0 };
+      shownEq = { cathode: false, anode: false };
+      revealed = false; time = 0; dissolved = 0; anodeTimer = 0; electronPhase = 0; charge = 0; owed = {}; refilling = {}; refillTimer = 0;
+      if (!isStory()) populate();
+      startCations = ions.filter(p => p.sp.charge > 0 && !p.water).length;
+      waters = [];
+      for (let i = 0; i < 30; i++) waters.push({ u: Math.random(), v: Math.random(), vx: 0, vy: 0, a: Math.random() * 6.28 });
+    }
+
+    function populateStory() {
+      const entries = Object.entries(preset.ions);
+      const unit = entries.reduce((a, [, r]) => a + r, 0);
+      const mult = unit >= 4 || preset.dilute ? 1 : 2;
+      const list = [];
+      entries.forEach(([k, r]) => { for (let i = 0; i < r * mult; i++) list.push([k, false]); });
+      if (aqueous) ['H+', 'OH-'].forEach(k => { if (!preset.ions[k]) for (let i = 0; i < 2; i++) list.push([k, true]); });
+      // interleave cations and anions so the column is mixed
+      const catsL = list.filter(x => SPECIES[x[0]].charge > 0), ansL = list.filter(x => SPECIES[x[0]].charge < 0);
+      const ordered = [];
+      while (catsL.length || ansL.length) { if (catsL.length) ordered.push(catsL.shift()); if (ansL.length) ordered.push(ansL.shift()); }
+      const L = layout();
+      const maxR = Math.max(...ordered.map(([k]) => ionR({ k })));
+      const n = ordered.length;
+      let spacing = maxR * 2.3, cols = 1;
+      if (n * spacing > L.liquid.h * 0.9) { cols = 2; spacing = Math.min(spacing, L.liquid.h * 0.9 / Math.ceil(n / 2)); }
+      const rows = Math.ceil(n / cols);
+      ordered.forEach(([k, w], i) => {
+        const col = i % cols, row = Math.floor(i / cols);
+        const u = cols === 1 ? 0.5 : 0.5 + (col === 0 ? -1 : 1) * (maxR * 1.15 / L.liquid.w);
+        const v = 0.5 + (row - (rows - 1) / 2) * spacing / L.liquid.h;
+        ions.push(newIon(k, w, { u, v }));
+      });
+    }
+    function topUp() {
+      const total = D()['motion.count'];
+      const entries = Object.entries(preset.ions);
+      const sum = entries.reduce((a, [, r]) => a + r, 0);
+      let guard = 0;
+      while (ions.length < total && guard++ < 200) {
+        let pick = Math.random() * sum;
+        for (const [k, r] of entries) { pick -= r; if (pick <= 0) { ions.push(newIon(k)); break; } }
+      }
+    }
+    function setStep(i, rebuild) {
+      if (rebuild) resetState();
+      storyStep = Math.max(0, Math.min(steps.length - 1, i));
+      if (storyStep > 0 && !ions.length) { populateStory(); startCations = ions.filter(p => p.sp.charge > 0 && !p.water).length; }
+      if (steps[storyStep].flags.free && C().replenish) topUp();
+    }
+    function action(id) {
+      if (id === 'reveal') revealed = true;
+      if (id === 'next') {
+        if (ctx.overlay.childElementCount) return;              // a question is open
+        if (storyStep >= steps.length - 1) reset(preset.id);
+        else if (isStudy() && !asked[storyStep + 1] && questionsFor(storyStep + 1).length) openQuestion(storyStep + 1);
+        else setStep(storyStep + 1);
+      }
+      if (id === 'back') { if (ctx.overlay.childElementCount) return; if (storyStep > 0) setStep(storyStep - 1, true); }
+    }
+    function onControl(id, v) {
+      if (id === 'predict' && !v) revealed = false;
+      if (id === 'guide' || id === 'electrodes' || id === 'difficulty') reset(preset.id);
+    }
+
+    const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+    function buildStory() {
+      const both = C().electrodes === 'both';
+      const cat = SPECIES[R.cathode], an = R.anode ? SPECIES[R.anode] : null;
+      const keys = Object.keys(preset.ions);
+      const cats = keys.filter(k => SPECIES[k].charge > 0), ans = keys.filter(k => SPECIES[k].charge < 0);
+      const fl = k => SPECIES[k].formula;
+      const join = arr => arr.length > 1 ? arr.slice(0, -1).join(', ') + ' and ' + arr[arr.length - 1] : arr[0];
+      const f = {}, S = [];
+      // add(text, flagPatch, highlight, flow) ; flow = { cathode: short, anode: short } or null
+      const add = (text, patch, highlight, flow, key) => { Object.assign(f, patch || {}); S.push({ text, flags: Object.assign({}, f, { highlight: highlight || null }), flow: flow || null, key: key || null }); };
+      const nC = Math.abs(cat.charge), nA = an ? Math.abs(an.charge) : 2;
+      const catProd = cat.product, anProd = R.anodeDissolves ? COPPER_ANODE : an.product;
+      const catDir = L0().cathode.side < 0 ? 'left' : 'right', anDir = catDir === 'left' ? 'right' : 'left';
+
+      // Sentences and short labels, cathode side
+      const cathode = {
+        push: ['Switch on. Electrons are pushed from the negative (−) terminal of the power supply, along the wire, towards the ' + catDir + ' electrode.', 'Electrons pushed from the negative terminal to the electrode'],
+        charged: ['The ' + catDir + ' electrode is now electron rich, so it has a negative charge. It is called the cathode.', 'Electrode is electron rich (negative): the cathode'],
+        move: ['Positive ions (cations) are attracted to the negative cathode and move towards it.', 'Cations (+) attracted to the cathode'],
+        compete: null,
+        discharge: ['At the cathode each ' + cat.formula + ' ion gains ' + nC + (nC === 1 ? ' electron' : ' electrons') + ' from the cathode:   ' + catProd.eq, catProd.eq],
+        product: [(catProd.type === 'metal' ? cap(catProd.name) + ' atoms form and build up on the cathode.' : cap(catProd.name) + ' gas forms as bubbles at the cathode.') + ' The ions have been reduced (they gained electrons).', cap(catProd.name) + ' forms (reduction)']
+      };
+      if (aqueous && cat.element !== 'H') cathode.compete = [cat.formula + ' and H^+ (from water) both reach the cathode. ' + cap(catProd.name) + ' is less reactive than hydrogen, so the ' + cat.formula + ' ions are discharged.', cat.formula + ' discharged, not H^+ (' + catProd.name + ' less reactive)'];
+      else if (aqueous && cats.length && cats[0] !== 'H+') cathode.compete = [fl(cats[0]) + ' and H^+ (from water) both reach the cathode. ' + cap(SPECIES[cats[0]].product.name) + ' is more reactive than hydrogen, so the H^+ ions are discharged instead.', 'H^+ discharged, not ' + fl(cats[0]) + ' (' + SPECIES[cats[0]].product.name + ' more reactive)'];
+
+      // Anode side
+      const anode = {
+        push: ['The positive (+) terminal of the power supply pulls electrons out of the ' + anDir + ' electrode, along the wire.', 'Electrons pulled from the electrode to the positive terminal'],
+        charged: ['The ' + anDir + ' electrode is now electron poor, so it has a positive charge. It is called the anode.', 'Electrode is electron poor (positive): the anode'],
+        move: ['Negative ions (anions) are attracted to the positive anode and move towards it.', 'Anions (−) attracted to the anode'],
+        compete: null,
+        discharge: R.anodeDissolves
+          ? ['The copper anode is not inert. Copper atoms lose electrons to the anode and go into solution as Cu^2+ ions:   Cu → Cu^2+ + 2e^-', 'Cu → Cu^2+ + 2e^-']
+          : ['At the anode each ' + an.formula + ' ion loses ' + nA + (nA === 1 ? ' electron' : ' electrons') + ' to the anode:   ' + anProd.eq, anProd.eq],
+        product: R.anodeDissolves
+          ? ['The anode slowly dissolves while the cathode gains copper. The electrons flow through the wire back to the positive terminal.', 'Anode dissolves']
+          : [cap(anProd.name) + (anProd.vapour ? ' vapour' : ' gas') + ' forms at the anode. The ions have been oxidised (they lost electrons). The electrons flow back to the positive terminal.', cap(anProd.name) + ' forms (oxidation)']
+      };
+      if (!R.anodeDissolves && aqueous) {
+        if (an.halide) anode.compete = [join(ans.map(fl)) + ' and OH^- (from water) both reach the anode. Halide ions are discharged, so ' + anProd.name + ' forms.', an.formula + ' discharged, not OH^- (halide)'];
+        else if (preset.dilute) anode.compete = [join(ans.map(fl)) + ' and OH^- (from water) both reach the anode. The solution is dilute, so there are only a few ' + join(ans.map(fl)) + ' ions. OH^- ions are discharged instead and oxygen forms.', 'OH^- discharged, not ' + join(ans.map(fl)) + ' (dilute)'];
+        else anode.compete = [join(ans.map(fl)) + ' and OH^- (from water) both reach the anode. ' + cap(join(ans.map(k => SPECIES[k].name + 's'))) + ' are not discharged. Instead OH^- ions are discharged and oxygen forms.', 'OH^- discharged, not ' + join(ans.map(fl))];
+      }
+
+      const obsC = OBS[catProd.formula], obsA = R.anodeDissolves ? OBS.dissolve : OBS[anProd.formula];
+      const extraObs = preset.id === 'cuso4-inert' ? ' The blue colour of the solution slowly fades.' : preset.id === 'cuso4-copper' ? ' The solution stays blue.' : '';
+      add(preset.title + '. Press Next to reveal the ions in the electrolyte.', {}, null, null, 'start');
+      add(preset.title + ' contains ions that are free to move: ' + join(keys.map(fl)) + (aqueous ? ', plus a few H^+ and OH^- ions from the water.' : '.'), {}, 'ions', null, 'intro');
+      // Each pair = one numbered step: sub-step a (cathode) then b (anode) in one-at-a-time mode, or one combined step in both mode.
+      const pairs = [
+        { key: 'push',
+          a: [cathode.push[0], { power: true, eCath: true }, 'negTerminal', { cathode: cathode.push[1] }],
+          b: [anode.push[0], { eAn: true }, 'posTerminal', { anode: anode.push[1] }],
+          both: ['Switch on. Electrons are pushed from the negative terminal towards the ' + catDir + ' electrode, and pulled out of the ' + anDir + ' electrode into the positive terminal.', { power: true, eCath: true, eAn: true }, 'terminals', { cathode: cathode.push[1], anode: anode.push[1] }] },
+        { key: 'charged',
+          a: [cathode.charged[0], { cathodeCharged: true }, 'cathode', { cathode: cathode.charged[1] }],
+          b: [anode.charged[0], { anodeCharged: true }, 'anode', { anode: anode.charged[1] }],
+          both: ['The ' + catDir + ' electrode is now electron rich (negative): the cathode. The ' + anDir + ' electrode is electron poor (positive): the anode.', { cathodeCharged: true, anodeCharged: true }, 'electrodes', { cathode: cathode.charged[1], anode: anode.charged[1] }] },
+        { key: 'move',
+          a: [cathode.move[0], { cationsMove: true }, 'cations', { cathode: cathode.move[1] }],
+          b: [anode.move[0], { anionsMove: true }, 'anions', { anode: anode.move[1] }],
+          both: ['Cations (+) are attracted to the negative cathode; anions (−) are attracted to the positive anode.', { cationsMove: true, anionsMove: true }, 'ions', { cathode: cathode.move[1], anode: anode.move[1] }] },
+        { key: 'compete',
+          a: cathode.compete && [cathode.compete[0], {}, 'cathode', { cathode: cathode.compete[1] }],
+          b: anode.compete && [anode.compete[0], {}, 'anode', { anode: anode.compete[1] }],
+          both: (cathode.compete || anode.compete) && [[cathode.compete && cathode.compete[0], anode.compete && anode.compete[0]].filter(Boolean).join(' '), {}, 'electrodes', { cathode: cathode.compete && cathode.compete[1], anode: anode.compete && anode.compete[1] }] },
+        { key: 'discharge',
+          a: [cathode.discharge[0], { cathodeDischarge: true }, 'cathode', { cathode: cathode.discharge[1] }],
+          b: [anode.discharge[0], { anodeDischarge: true }, 'anode', { anode: anode.discharge[1] }],
+          both: ['Cathode: ' + catProd.eq + '     Anode: ' + anProd.eq, { cathodeDischarge: true, anodeDischarge: true }, 'electrodes', { cathode: cathode.discharge[1], anode: anode.discharge[1] }] },
+        { key: 'product',
+          a: [cathode.product[0], {}, null, { cathode: cathode.product[1] }],
+          b: [anode.product[0], {}, null, { anode: anode.product[1] }],
+          both: [cathode.product[0].split('. ')[0] + '. ' + anode.product[0].split('. ')[0] + '. Reduction at the cathode, oxidation at the anode.', {}, null, { cathode: cathode.product[1], anode: anode.product[1] }] },
+        { key: 'observe',
+          a: ['What you would observe at the cathode: ' + obsC.text + '.', { observeC: true }, 'cathode', { cathode: 'Observe: ' + obsC.short }],
+          b: ['What you would observe at the anode: ' + obsA.text + '.' + extraObs, { observeA: true }, 'anode', { anode: 'Observe: ' + obsA.short }],
+          both: ['Observations. Cathode: ' + obsC.text + '. Anode: ' + obsA.text + '.' + extraObs, { observeC: true, observeA: true }, 'electrodes', { cathode: 'Observe: ' + obsC.short, anode: 'Observe: ' + obsA.short }] }
+      ];
+      let num = 0;
+      pairs.forEach(pr => {
+        if (both) { if (!pr.both) return; num++; add(pr.both[0], pr.both[1], pr.both[2], pr.both[3], pr.key); S[S.length - 1].num = num; return; }
+        if (!pr.a && !pr.b) return;
+        num++;
+        const single = !(pr.a && pr.b);
+        if (pr.a) { add(pr.a[0], pr.a[1], pr.a[2], pr.a[3], pr.key); Object.assign(S[S.length - 1], { num, sub: single ? null : 'a' }); }
+        if (pr.b) { add(pr.b[0], pr.b[1], pr.b[2], pr.b[3], pr.key); Object.assign(S[S.length - 1], { num, sub: single ? null : 'b' }); }
+      });
+      add('The circuit is complete: electrons flow all the way round. Ions keep moving and products keep forming while the power is on.', { free: true }, null, null, 'finish');
+      return S;
+    }
+    function L0() { const d = D(); return { cathode: { side: d['layout.cathodeSide'] === 'right' ? 1 : -1 } }; }
+
+    // ------------------------------------------------------------ study questions
+    const norm = t => String(t || '').toLowerCase()
+      .replace(/[−–]/g, '-').replace(/→|=>|->|=/g, '>')
+      .replace(/[⁺]/g, '+').replace(/[⁻]/g, '-')
+      .replace(/[²]/g, '2').replace(/[³]/g, '3').replace(/[₂]/g, '2').replace(/[₃]/g, '3').replace(/[₄]/g, '4')
+      .replace(/[\^_\s]/g, '').replace(/ions?$/g, '').replace(/e-/g, 'e');
+    const normIon = t => norm(t).replace(/ion$/, '').replace(/^(\d)([a-z])/, '$2$1').replace(/^([a-z]+)(\d?)([+-])$/, (m, el, n, sg) => el + (n || '1') + sg);
+    const splitList = t => String(t || '').split(/\s*(?:,|;|\band\b|&|\s\+\s)\s*/).map(x => x.trim()).filter(Boolean);
+    const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+    const opt = (label, correct) => ({ label, correct: !!correct });
+    const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+    const ionAliases = k => { const sp = SPECIES[k]; return [normIon(sp.formula), norm(sp.name)]; };
+    const eqVariants = eq => {
+      const [lhs, rhs] = eq.split('→').map(x => x.trim());
+      const terms = lhs.split(' + ');
+      const rterms = rhs.split(' + ');
+      const out = [];
+      const perms = terms.length === 2 ? [terms, [terms[1], terms[0]]] : [terms];
+      const rperms = rterms.length === 2 ? [rterms, [rterms[1], rterms[0]]] : [rterms];
+      perms.forEach(l => rperms.forEach(r => out.push(norm(l.join(' + ') + ' → ' + r.join(' + ')))));
+      return out;
+    };
+    const wrongCharge = k => {
+      const sp = SPECIES[k], el = sp.formula.split('^')[0];
+      const c = sp.charge, mag = Math.abs(c), sign = c > 0 ? '+' : '-', flip = c > 0 ? '-' : '+';
+      const alt = [];
+      alt.push(el + '^' + (mag === 1 ? '' : mag) + flip);                       // wrong sign
+      alt.push(el + '^' + (mag === 1 ? '2' : mag === 2 ? '' : '2') + sign);   // wrong size
+      return alt;
+    };
+    const POOL_IONS = ['Pb2+', 'Br-', 'Na+', 'Cl-', 'Cu2+', 'SO42-', 'H+', 'OH-', 'Al3+', 'O2-'];
+    const POOL_PRODUCTS = ['lead', 'bromine', 'sodium', 'chlorine', 'aluminium', 'oxygen', 'hydrogen', 'copper'];
+
+    function questionsFor(i) {
+      const st = steps[i]; if (!st || !st.key || st.sub === 'b') return [];
+      const hasCompete = steps.some(x => x.key === 'compete');
+      const keys = { intro: ['intro'], push: ['push'], charged: ['charged'], move: ['move'],
+        compete: ['discharge'], discharge: hasCompete ? ['product'] : ['discharge', 'product'], product: [], observe: ['observe'] }[st.key] || [];
+      return keys.map(buildQuestion).filter(Boolean);
+    }
+    function questionFor(i) { return questionsFor(i)[0] || null; }
+    function buildQuestion(key) {
+      const diff = C().difficulty || 'easy';
+      const hard = diff === 'hard', medium = diff === 'medium';
+      const cat = SPECIES[R.cathode], an = R.anode ? SPECIES[R.anode] : null;
+      const catProd = cat.product, anProd = R.anodeDissolves ? COPPER_ANODE : an.product;
+      const keys = Object.keys(preset.ions);
+      const present = keys.slice(); if (aqueous) ['H+', 'OH-'].forEach(k => { if (!present.includes(k)) present.push(k); });
+      const cations = present.filter(k => SPECIES[k].charge > 0), anions = present.filter(k => SPECIES[k].charge < 0);
+      const fl = k => SPECIES[k].formula;
+      const catDir = L0().cathode.side < 0 ? 'left' : 'right', anDir = catDir === 'left' ? 'right' : 'left';
+      const nC = Math.abs(cat.charge), nA = an ? Math.abs(an.charge) : 2;
+      const other = n => n === 1 ? 2 : 1;
+      const plural = n => n + (n === 1 ? ' electron' : ' electrons');
+      const typedSet = (correctKeys, placeholder, label) => ({
+        label, placeholder, answer: correctKeys.map(fl).join(' and '),
+        check: t => { const got = splitList(t).map(normIon); const ok = correctKeys.map(ionAliases); return got.length === ok.length && ok.every(al => got.some(g => al.includes(g))) && got.every(g => ok.some(al => al.includes(g))); }
+      });
+      const typedWords = (answers, answer, placeholder, label) => ({ label, placeholder, answer, check: t => answers.map(norm).includes(norm(t)) });
+      const typedEq = (eq, label) => ({ label, placeholder: 'e.g. X^2+ + 2e^- → X', answer: eq, check: t => eqVariants(eq).includes(norm(t)) });
+      const ionOptions = correct => {
+        const opts = correct.map(k => opt(fl(k), true));
+        if (medium) {
+          correct.forEach(k => wrongCharge(k).forEach(w => opts.push(opt(w, false))));
+          shuffle(POOL_IONS.filter(k => !correct.includes(k))).slice(0, 3).forEach(k => opts.push(opt(wrongCharge(k)[Math.random() < 0.5 ? 0 : 1], false)));
+          return shuffle(opts);
+        }
+        const distract = shuffle(POOL_IONS.filter(k => !correct.includes(k)));
+        while (opts.length < Math.max(4, correct.length + 2) && distract.length) opts.push(opt(fl(distract.shift()), false));
+        return shuffle(opts);
+      };
+      const productOptions = correctName => {
+        const opts = [opt(correctName, true)];
+        shuffle(POOL_PRODUCTS.filter(x => x !== correctName)).slice(0, 3).forEach(x => opts.push(opt(x, false)));
+        return shuffle(opts);
+      };
+      const competeQ = (a, b, where, correct) => ({
+        prompt: fl(a) + ' and ' + fl(b) + ' both reach the ' + where + '. Which ion is discharged?',
+        options: hard ? null : shuffle([opt(fl(a), correct === a), opt(fl(b), correct === b)].concat(medium ? [opt('Both', false), opt('Neither', false)] : [])),
+        typed: hard ? typedSet([correct], 'Type the ion, e.g. X^2+') : null
+      });
+      const anodeDischargeLabel = R.anodeDissolves ? 'Copper atoms of the anode' : null;
+      const anodeHappens = R.anodeDissolves
+        ? ['Copper atoms lose 2 electrons and go into solution as Cu^2+ ions: the anode dissolves', 'Copper atoms gain 2 electrons: the anode grows']
+        : [an.formula + ' ions lose ' + plural(nA) + ': ' + anProd.name + ' forms', an.formula + ' ions gain ' + plural(nA) + ': ' + anProd.name + ' forms'];
+      const cathodeHappens = [cat.formula + ' ions gain ' + plural(nC) + ': ' + catProd.name + ' forms', cat.formula + ' ions lose ' + plural(nC) + ': ' + catProd.name + ' forms'];
+
+      switch (key) {
+        case 'intro': return {
+          prompt: 'Which ions are present in ' + preset.title.charAt(0).toLowerCase() + preset.title.slice(1) + '?',
+          hint: aqueous ? 'Include the ions from water.' : (medium ? 'Check the charges carefully.' : null),
+          multi: !hard, options: hard ? null : ionOptions(present),
+          typed: hard ? typedSet(present, 'e.g. X^2+ and Y^-') : null
+        };
+        case 'push': {
+          const bank = ['pushed from', 'pulled from', 'negative terminal', 'positive terminal', 'cathode', 'anode'];
+          if (medium) bank.push('pushed to', 'pulled to');
+          return {
+            prompt: 'The power is switched on. Fill in the gaps. Click a gap, then click a word.',
+            gaps: hard ? null : {
+              sentences: [['Electrons are', '', 'the', '', 'to the', ''], ['Electrons are', '', 'the', '', 'to the', '']],
+              answers: [['pushed from', 'negative terminal', 'cathode'], ['pulled from', 'anode', 'positive terminal']],
+              bank: shuffle(bank), unordered: true
+            },
+            typed: hard ? { fields: [
+              typedWords(['negative', 'negative terminal', 'the negative terminal', 'neg', '-', '−'], 'negative', 'negative or positive', 'Which terminal pushes electrons out into the wire?'),
+              typedWords(['positive', 'positive terminal', 'the positive terminal', 'pos', '+'], 'positive', 'negative or positive', 'Which terminal pulls electrons in from the wire?')
+            ] } : null
+          };
+        }
+        case 'charged': {
+          const gains = 'Gains electrons, so it is negatively charged', loses = 'Loses electrons, so it is positively charged';
+          const right = [gains, loses];
+          if (medium) right.push('Gains electrons, so it is positively charged', 'Loses electrons, so it is negatively charged');
+          return {
+            prompt: 'Match each electrode to what happens to it. Click an electrode, then click its partner.',
+            match: hard ? null : { left: [{ label: 'Electrode connected to the negative terminal', answer: gains }, { label: 'Electrode connected to the positive terminal', answer: loses }], right: shuffle(right) },
+            typed: hard ? { fields: [
+              typedWords(['cathode', 'the cathode', 'negative cathode'], 'cathode', 'cathode or anode', 'The electrode connected to the negative terminal gains electrons. It is called the...'),
+              typedWords(['anode', 'the anode', 'positive anode'], 'anode', 'cathode or anode', 'The electrode connected to the positive terminal loses electrons. It is called the...')
+            ] } : null
+          };
+        }
+        case 'move': {
+          const right = ['Cathode (negative electrode)', 'Anode (positive electrode)'];
+          if (medium) right.push('Does not move');
+          return {
+            prompt: 'Which electrode does each ion move towards? Click an ion, then click the electrode.',
+            match: hard ? null : { left: shuffle(present).map(k => ({ label: fl(k), answer: SPECIES[k].charge > 0 ? right[0] : right[1] })), right },
+            typed: hard ? { fields: [typedSet(cations, 'e.g. X^2+', 'Ions that move to the cathode'), typedSet(anions, 'e.g. Y^-', 'Ions that move to the anode')] } : null
+          };
+        }
+        case 'discharge': {
+          const right = shuffle(present.map(fl).concat(anodeDischargeLabel ? [anodeDischargeLabel] : []));
+          if (medium && !anodeDischargeLabel) right.push('Copper atoms of the anode');
+          return {
+            prompt: hard ? 'What is discharged at each electrode?' : 'What is discharged at each electrode? Click an electrode, then click what is discharged there.',
+            match: hard ? null : { left: [{ label: 'At the cathode (negative)', answer: fl(R.cathode) }, { label: 'At the anode (positive)', answer: anodeDischargeLabel || fl(R.anode) }], right },
+            typed: hard ? { fields: [
+              typedSet([R.cathode], 'e.g. X^2+', 'Ion discharged at the cathode'),
+              R.anodeDissolves ? { label: 'What is discharged (loses electrons) at the anode?', placeholder: 'what loses electrons?', answer: 'copper atoms of the anode', check: t => /copper|^cu$|cuatom|anode/.test(norm(t)) } : typedSet([R.anode], 'e.g. Y^-', 'Ion discharged at the anode')
+            ] } : null
+          };
+        }
+        case 'observe': {
+          const obsC = OBS[catProd.formula], obsA = R.anodeDissolves ? OBS.dissolve : OBS[anProd.formula];
+          const cap1 = t => t.charAt(0).toUpperCase() + t.slice(1);
+          const pool = OBS_POOL.filter(k => OBS[k] !== obsC && OBS[k] !== obsA);
+          const right = shuffle([cap1(obsC.short), cap1(obsA.short)].concat(shuffle(pool).slice(0, medium ? 3 : 2).map(k => cap1(OBS[k].short))));
+          return {
+            prompt: hard ? 'What would you observe at each electrode?' : 'What would you observe at each electrode? Click an electrode, then click the observation.',
+            match: hard ? null : { left: [{ label: 'At the cathode (negative)', answer: cap1(obsC.short) }, { label: 'At the anode (positive)', answer: cap1(obsA.short) }], right },
+            typed: hard ? { fields: [
+              { label: 'Observation at the cathode', placeholder: 'What would you see, hear or smell?', answer: obsC.text, check: t => obsC.match.test(norm(t)) },
+              { label: 'Observation at the anode', placeholder: 'What would you see, hear or smell?', answer: obsA.text, check: t => obsA.match.test(norm(t)) }
+            ] } : null
+          };
+        }
+        case 'product': {
+          const right = shuffle([cathodeHappens[0], anodeHappens[0], cathodeHappens[1], anodeHappens[1]]);
+          return {
+            prompt: hard ? 'Write the half-equation for each electrode.' : 'What happens at each electrode? Click an electrode, then click what happens there.',
+            match: hard ? null : { left: [{ label: 'Cathode (negative)', answer: cathodeHappens[0] }, { label: 'Anode (positive)', answer: anodeHappens[0] }], right },
+            typed: hard ? { fields: [typedEq(catProd.eq, 'Half-equation at the cathode'), typedEq(R.anodeDissolves ? COPPER_ANODE.eq : anProd.eq, 'Half-equation at the anode')] } : null,
+            hint: hard ? 'Use → or -> for the arrow, e- for an electron.' : null
+          };
+        }
+        default: return null;
+      }
+    }
+
+    function openQuestion(i) {
+      const qs = questionsFor(i);
+      const finish = () => { asked[i] = true; setStep(i); };
+      if (!qs.length) { finish(); return; }
+      let k = 0;
+      const askNext = () => {
+        if (k >= qs.length) { finish(); return; }
+        Quiz.ask(ctx.overlay, qs[k++], firstTry => { score.total++; if (firstTry) score.right++; askNext(); });
+      };
+      askNext();
+    }
+
+    // ------------------------------------------------------------ update
+    function update(dt) {
+      const c = C(), d = D(), L = layout(), s = L.s;
+      time += dt;
+      const f = flags();
+      const power = f ? !!f.power : !!c.power;
+      const jitter = d['motion.jitter'] * 900 * s * (f && !f.free ? 0.25 : 1);
+      const drift = d['motion.drift'] * 320 * s;
+      const maxV = 150 * s * Math.max(1, d['motion.drift']);
+      const dischargeTime = d['motion.discharge'];
+      const anodeSupply = R.anodeDissolves || ions.some(p => p.k === R.anode && p.state === 'free');
+      const cathodeSupply = ions.some(p => p.k === R.cathode && p.state === 'free');
+
+      for (let i = ions.length - 1; i >= 0; i--) {
+        const p = ions[i];
+        const r = ionR(p);
+        let [x, y] = px(p, L);
+        if (p.state === 'free') {
+          P.wander(p, jitter, dt);
+          const target = p.sp.charge > 0 ? L.cathode : L.anode;
+          const mayMove = !f || f.free || (p.sp.charge > 0 ? f.cationsMove : f.anionsMove);
+          if (power && mayMove) {
+            const spectator = !(p.k === R.cathode || p.k === R.anode);
+            p.vx += Math.sign(target.cx - x) * drift * (spectator ? 0.6 : 1) * dt;
+            const other = target === L.cathode ? L.anode : L.cathode;
+            const between = (other.cx - x) * (target.cx - x) < 0;   // other electrode lies in the way
+            if (between && Math.abs(other.cx - x) < other.w / 2 + r * 3 && y < other.y + other.h + r * 1.5) p.vy += drift * 1.2 * dt;
+            // parked underneath the target electrode: rise up to its face so it can be discharged
+            const underTarget = y > target.y + target.h - r && Math.abs(target.cx - x) < target.w / 2 + r * 2.5;
+            if (underTarget) { p.vy -= drift * 1.5 * dt; p.vx += (x < target.cx ? -1 : 1) * drift * 0.4 * dt; }
+          }
+          P.clampSpeed(p, maxV);
+          x += p.vx * dt; y += p.vy * dt;
+          for (const E of [L.cathode, L.anode]) {
+            const inY = y > E.y - r && y < E.y + E.h + r;
+            if (inY && x > E.x - r && x < E.x + E.w + r) {
+              const isTarget = E === target;
+              const balanced = f ? true : (E.name === 'cathode' ? (charge > -SLACK || !anodeSupply) : (charge < SLACK || !cathodeSupply));
+              const allowed = !f || f.free || (E.name === 'cathode' ? f.cathodeDischarge : f.anodeDischarge);
+              const canDischarge = power && isTarget && balanced && allowed &&
+                ((E.name === 'cathode' && p.k === R.cathode) || (E.name === 'anode' && p.k === R.anode));
+              if (canDischarge) { startDischarge(p, E, x, y, r, L); break; }
+              const side = x < E.cx ? -1 : 1;
+              const standoff = (isTarget && power && !((E.name === 'cathode' && p.k === R.cathode) || (E.name === 'anode' && p.k === R.anode))) ? r * 1.6 : r + 0.5;
+              x = E.cx + side * (E.w / 2 + standoff);
+              p.vx = -p.vx * 0.3;
+              // wrong electrode in the way: slide down and go underneath it
+              if (power && mayMove && !isTarget) p.vy = Math.max(p.vy, 110 * s);
+            }
+          }
+          const tmp = { x, y, vx: p.vx, vy: p.vy };
+          P.confine(tmp, L.liquid, r, 0.5);
+          p.vx = tmp.vx; p.vy = tmp.vy;
+          if (p.state === 'free') setPx(p, tmp.x, tmp.y, L);
+        } else if (p.state === 'discharging') {
+          p.t += dt;
+          if (p.t >= dischargeTime) finishDischarge(p, i, L);
+        } else if (p.state === 'emerging') {
+          p.t += dt;
+          if (p.t >= 0.6) p.state = 'free';
+        }
+      }
+
+      // keep free ions apart
+      const isDischarger = p => p.k === R.cathode || p.k === R.anode;
+      const free = ions.filter(p => p.state === 'free').map(p => { const [x, y] = px(p, L); return { p, x, y, group: power ? (isDischarger(p) ? 1 : 0) : 0 }; });
+      P.separate(free, o => ionR(o.p), 2, (a, b) => a.group === b.group);
+      free.forEach(o => setPx(o.p, o.x, o.y, L));
+
+      // bubbles
+      const rise = d['motion.bubbleSpeed'] * 55 * s;
+      for (let i = bubbles.length - 1; i >= 0; i--) {
+        const b = bubbles[i];
+        b.y -= rise * dt; b.phase += dt * 4;
+        if (b.y - b.r < L.liquid.y) { gasCloud[b.E] = Math.min(1, gasCloud[b.E] + 0.12); bubbles.splice(i, 1); }
+      }
+      // flashes (electron transfer sparks)
+      for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t += dt; if (flashes[i].t > 0.5) flashes.splice(i, 1); }
+
+      // copper anode dissolving
+      if (power && R.anodeDissolves && (!f || f.free || f.anodeDischarge)) {
+        anodeTimer += dt;
+        const period = 0.55 / d['motion.drift'];
+        if (anodeTimer > period && (f || charge < SLACK || !cathodeSupply)) { anodeTimer = 0; charge += 2; dissolveStep(L); }
+      }
+      // deferred replenishment: let the ions already present discharge first, then a fresh batch drifts in
+      refillTimer += dt;
+      for (const k in owed) {
+        if (!(owed[k] > 0)) { refilling[k] = false; continue; }
+        const freeK = ions.reduce((n, q) => n + (q.k === k && q.state === 'free' ? 1 : 0), 0);
+        if (freeK <= 1) refilling[k] = true;
+        if (refilling[k] && refillTimer > 0.15) { refillTimer = 0; owed[k]--; ions.push(newIon(k)); }
+      }
+      if (power && (f || c.electrons)) electronPhase += dt * d['motion.electronSpeed'];
+      if (!f && c.equations === 'always') shownEq.cathode = shownEq.anode = true;
+
+      // water molecules drift slowly
+      waters.forEach(wm => { P.wander(wm, 40 * s, dt, 1); wm.u += wm.vx * dt / L.liquid.w; wm.v += wm.vy * dt / L.liquid.h; wm.a += dt * 0.3;
+        if (wm.u < 0.02 || wm.u > 0.98) { wm.vx *= -1; wm.u = Math.min(0.98, Math.max(0.02, wm.u)); }
+        if (wm.v < 0.02 || wm.v > 0.98) { wm.vy *= -1; wm.v = Math.min(0.98, Math.max(0.02, wm.v)); } });
+    }
+
+    function startDischarge(p, E, x, y, r, L) {
+      p.state = 'discharging'; p.t = 0;
+      p.side = x < E.cx ? -1 : 1;
+      p.electrode = E.name;
+      charge += E.name === 'cathode' ? -Math.abs(p.sp.charge) : Math.abs(p.sp.charge);
+      const sx = E.cx + p.side * (E.w / 2 + r);
+      const sy = Math.min(Math.max(y, L.liquid.y + r), E.y + E.h - r);
+      setPx(p, sx, sy, L);
+      p.vx = p.vy = 0;
+    }
+
+    function finishDischarge(p, i, L) {
+      const E = p.electrode, prod = p.sp.product;
+      ions.splice(i, 1);
+      shownEq[E] = true;
+      if (prod.type === 'metal') {
+        counts[E]++;
+        if (deposits[E].length < 80) deposits[E].push({ side: p.side, v: p.v, r: ionR(p) * 0.8, k: p.k });
+      } else {
+        pending[E]++;
+        if (pending[E] >= prod.n) { pending[E] -= prod.n; counts[E]++; spawnBubble(E, p, L); }
+      }
+      const cationFromAnode = R.anodeDissolves && p.sp.charge > 0;
+      const f = flags();
+      const replenish = (p.water || !!C().replenish) && (!f || f.free);
+      // water ions return at once (water is effectively infinite); electrolyte ions are owed and
+      // only return once the ones already present have been discharged (see update)
+      if (replenish && !cationFromAnode) { if (p.water) ions.push(newIon(p.k, true)); else owed[p.k] = (owed[p.k] || 0) + 1; }
+    }
+
+    function spawnBubble(E, p, L) {
+      const d = D(), el = L[E];
+      const [, y] = px(p, L);
+      const base = 7 * L.s * d['motion.bubbleSize'] * P.rand(0.8, 1.25);
+      bubbles.push({ E, k: p.k, side: p.side, x0: el.cx + p.side * (el.w / 2 + base + 2), y, r: base, phase: Math.random() * 6.28 });
+    }
+
+    function dissolveStep(L) {
+      dissolved++; counts.anode++; shownEq.anode = true;
+      const el = L.anode, side = -el.side;
+      flashes.push({ x: el.cx + side * el.w / 2, y: L.liquid.y + P.rand(0.1, 0.8) * L.liquid.h, t: 0 });
+      if (ions.length > 90) return;
+      const p = newIon('Cu2+');
+      p.state = 'emerging'; p.t = 0; p.side = side;
+      const r = ionR(p);
+      setPx(p, el.cx + side * (el.w / 2 + r + 1), L.liquid.y + P.rand(0.1, 0.8) * L.liquid.h, L);
+      ions.push(p);
+    }
+
+    // ------------------------------------------------------------ draw
+    function draw() {
+      const c = C(), d = D(), L = layout(), s = L.s;
+      const f = flags();
+      const hidden = !f && !!c.predict && !revealed;
+      const font = d['text.font'], ts = d['text.size'] * s, textCol = d['colour.text'];
+      const T = (x, y, str, o) => g.text(x, y, str, Object.assign({ font, size: ts, color: textCol }, o));
+      const F = (x, y, str, o) => g.formula(x, y, str, Object.assign({ font, size: ts, color: textCol }, o));
+
+      g.begin(d['colour.background']);
+
+      const headW = g.w * 0.95;
+      if (d['text.showTitle']) {
+        g.formulaFit(g.w * 0.025, g.h * 0.05, preset.title + '   ' + preset.formula, { font, size: ts * 1.2, color: textCol, weight: '700', baseline: 'middle' }, headW);
+      }
+      if (!f && d['text.showNote'] && preset.note) {
+        const o = { font, size: ts * 0.8, color: g.withAlpha(textCol, 0.75) };
+        wrap(preset.note, headW, o).slice(0, 2).forEach((line, i) => g.text(g.w * 0.025, g.h * 0.05 + ts * (1.45 + i * 0.95), line, o));
+      }
+
+      if (d['layout.showSupply']) drawCircuit(L, d, c);
+
+      // beaker and liquid
+      let liquidCol = (d['colour.usePresetLiquid'] && preset.liquid) ? preset.liquid : (aqueous ? d['colour.liquidAqueous'] : d['colour.liquidMolten']);
+      if (preset.fades && d['colour.usePresetLiquid'] && preset.liquid) {
+        const supply = c.replenish ? 40 : Math.max(6, startCations);
+        liquidCol = g.mix(preset.liquid, '#f8fbff', counts.cathode / supply);
+      }
+      g.rect(L.liquid.x, L.liquid.y, L.liquid.w, L.liquid.h, liquidCol);
+      g.line(L.liquid.x, L.liquid.y, L.liquid.x + L.liquid.w, L.liquid.y, g.withAlpha(d['colour.glass'], 0.5), 1.5 * s);
+      g.path([[L.beaker.x, L.beaker.y], [L.beaker.x, L.beaker.y + L.beaker.h], [L.beaker.x + L.beaker.w, L.beaker.y + L.beaker.h], [L.beaker.x + L.beaker.w, L.beaker.y]], d['colour.glass'], 3 * s);
+
+      if (aqueous && c.water) drawWater(L, d, c);
+
+      drawElectrode(L.cathode, L, d, hidden);
+      drawElectrode(L.anode, L, d, hidden);
+
+      ions.forEach(p => drawIon(p, L, d, c));
+      bubbles.forEach(b => drawBubble(b, L, d, c, hidden));
+      flashes.forEach(f => g.alpha(1 - f.t * 2, () => g.circle(f.x, f.y, 6 * s + f.t * 20 * s, null, d['colour.electron'], 2 * s)));
+
+      ['cathode', 'anode'].forEach(E => drawProducts(E, L, d, hidden));
+      if (d['text.showElectrodeLabels']) { drawElectrodeLabel(L.cathode, L, d); drawElectrodeLabel(L.anode, L, d); }
+      if (f) {
+        if (f.observeC) drawObservation(L.cathode, OBS[SPECIES[R.cathode].product.formula], L, d);
+        if (f.observeA) drawObservation(L.anode, R.anodeDissolves ? OBS.dissolve : OBS[SPECIES[R.anode].product.formula], L, d);
+        if (f.highlight) drawHighlight(f.highlight, L, d); drawFlow(L, d); drawStory(L, d);
+      }
+      else drawEquations(L, d, c, hidden);
+
+      if (hidden) {
+        const msg = 'Predict the products!';
+        const w = g.textWidth(msg, { font, size: ts, weight: '700' }) + 24 * s;
+        g.roundRect(g.w - w - 12 * s, g.h * 0.03, w, ts * 2, 8 * s, '#fef08a', '#ca8a04', 1.5 * s);
+        T(g.w - 12 * s - w / 2, g.h * 0.03 + ts, msg, { align: 'center', weight: '700', color: '#713f12' });
+      }
+    }
+
+    function wrap(text, maxW, o) {
+      const words = text.split(' '), lines = []; let cur = '';
+      words.forEach(w => {
+        const t = cur ? cur + ' ' + w : w;
+        if (g.textWidth(t, o) > maxW && cur) { lines.push(cur); cur = w; } else cur = t;
+      });
+      if (cur) lines.push(cur);
+      return lines.slice(0, 3);
+    }
+
+    function electrodeColour(E, d) { return preset.electrodes === 'copper' ? d['colour.copper'] : d['colour.graphite']; }
+
+    function drawElectrode(E, L, d, hidden) {
+      const s = L.s;
+      const col = electrodeColour(E, d);
+      g.rect(E.x, E.y, E.w, E.h, col);
+      g.rect(E.x, E.y, E.w * 0.25, E.h, g.withAlpha('#ffffff', 0.15));
+      const f = flags();
+      if (f && (E.name === 'cathode' ? f.cathodeCharged : f.anodeCharged)) {
+        const sign = E.name === 'cathode' ? '−' : '+';
+        const top = L.liquid.y + 14 * s, bottom = E.y + E.h - 10 * s, n = 5;
+        for (let i = 0; i < n; i++) g.text(E.cx, top + (bottom - top) * i / (n - 1), sign, { size: Math.min(E.w * 0.9, 18 * s), color: '#ffffff', align: 'center', weight: '800' });
+      }
+      // deposit layer plus atoms
+      const list = deposits[E.name];
+      const count = counts[E.name];
+      if (SPECIES[R[E.name]] && SPECIES[R[E.name]].product.type === 'metal' && !R.anodeDissolves || (E.name === 'cathode' && R.anodeDissolves)) {
+        const pc = hidden ? '#9ca3af' : productColour(R.cathode);
+        const top = L.liquid.y + 4 * s, bottom = E.y + E.h;
+        if (count > 0) g.alpha(Math.min(1, count / 20), () => g.rect(E.x, top, E.w, bottom - top, pc));
+        const thick = Math.min(E.w * 0.9, Math.max(0, count - 12) * 0.35 * s);
+        if (thick > 0) {
+          g.rect(E.x - thick, top, E.w + 2 * thick, bottom - top + thick, pc);
+        }
+        list.forEach(a => {
+          const x = E.cx + a.side * (E.w / 2 + thick + a.r * 0.75);
+          const y = L.liquid.y + a.v * L.liquid.h;
+          g.circle(x, y, a.r, pc, g.darken(pc, 0.3), 1);
+        });
+      }
+    }
+
+    function drawElectrodeLabel(E, L, d) {
+      const s = L.s, ts = d['text.size'] * s, font = d['text.font'];
+      const neg = E.name === 'cathode';
+      const mode = d['text.electrodeNames'];
+      const f = flags();
+      const named = !f || (neg ? f.cathodeCharged : f.anodeCharged);
+      if (!named) { g.text(E.cx + E.side * (E.w / 2 + 8 * s), E.y + ts * 0.7, 'electrode', { font, size: ts, color: g.withAlpha(d['colour.text'], 0.7), align: E.side < 0 ? 'right' : 'left', weight: '600' }); return; }
+      const sym = neg ? 'cathode (−)' : 'anode (+)';
+      const words = neg ? 'negative electrode' : 'positive electrode';
+      let label = mode === 'words' ? words : sym;
+      const x = E.cx + E.side * (E.w / 2 + 8 * s);
+      const align = E.side < 0 ? 'right' : 'left';
+      g.text(x, E.y + ts * 0.7, label, { font, size: ts, color: d['colour.text'], align, weight: '700' });
+      if (mode === 'both') g.text(x, E.y + ts * 1.9, words, { font, size: ts * 0.85, color: g.withAlpha(d['colour.text'], 0.7), align });
+    }
+
+    function drawCircuit(L, d, c) {
+      const s = L.s, S = L.supply, wire = d['colour.wire'], lw = 3 * s;
+      const midY = S.y + S.h / 2;
+      const negX = L.cathode.side < 0 ? S.x : S.x + S.w;
+      const posX = L.anode.side < 0 ? S.x : S.x + S.w;
+      const cathPath = [[negX, midY], [L.cathode.cx, midY], [L.cathode.cx, L.cathode.y]];
+      const anPath = [[L.anode.cx, L.anode.y], [L.anode.cx, midY], [posX, midY]];
+      g.path(cathPath, wire, lw);
+      g.path(anPath, wire, lw);
+      // supply box
+      g.roundRect(S.x, S.y, S.w, S.h, 6 * s, '#f1f5f9', wire, lw * 0.7);
+      const ts = d['text.size'] * s, font = d['text.font'];
+      g.text(S.x + S.w / 2, S.y + S.h / 2, 'd.c. supply', { font, size: ts * 0.8, color: d['colour.text'], align: 'center' });
+      const [sx] = terminalPos(L, true), [px2] = terminalPos(L, false);
+      g.text(sx, S.y + S.h / 2, '−', { font, size: ts * 1.4, color: d['colour.text'], align: 'center', weight: '700' });
+      g.text(px2, S.y + S.h / 2, '+', { font, size: ts * 1.4, color: d['colour.text'], align: 'center', weight: '700' });
+
+      const f = flags();
+      if (f ? f.eCath : (c.power && c.electrons)) drawElectrons(cathPath, L, d, false);
+      if (f ? f.eAn : (c.power && c.electrons)) drawElectrons(anPath, L, d, true);
+    }
+
+    function terminalPos(L, neg) {
+      const S = L.supply, s = L.s, side = neg ? L.cathode.side : L.anode.side;
+      return [side < 0 ? S.x + 10 * s : S.x + S.w - 10 * s, S.y + S.h / 2];
+    }
+
+    function drawObservation(E, obs, L, d) {
+      const s = L.s, font = d['text.font'], size = Math.max(9, d['text.size'] * s * 0.8);
+      const lines = obs.icons;
+      const o = { font, size, color: d['colour.text'], weight: '600' };
+      const w = Math.max(...lines.map(t => g.textWidth(t, o))) + 16 * s;
+      const h = lines.length * size * 1.4 + 10 * s;
+      // callout sits between the electrodes, cathode one higher, anode one lower, with a pointer to its electrode
+      const x = E.side < 0 ? E.x + E.w + 12 * s : E.x - 12 * s - w;
+      const y = L.liquid.y + L.liquid.h * (E.name === 'cathode' ? 0.18 : 0.56) - h / 2;
+      g.roundRect(x, y, w, h, 8 * s, g.withAlpha('#ffffff', 0.94), '#f59e0b', 2 * s);
+      const px0 = E.side < 0 ? x : x + w, py0 = y + h / 2;
+      g.line(px0, py0, px0 - E.side * -1 * 0 + (E.side < 0 ? -10 * s : 10 * s), py0, '#f59e0b', 2 * s);
+      lines.forEach((t, i) => g.text(x + 8 * s, y + 5 * s + size * 0.7 + i * size * 1.4, t, o));
+    }
+
+    function drawHighlight(kind, L, d) {
+      const s = L.s, a = 0.55 + 0.45 * Math.sin(time * 5), col = '#f59e0b';
+      const ring = (x, y, r) => g.alpha(a, () => g.circle(x, y, r, null, col, 3 * s));
+      if (kind === 'ions' || kind === 'cations' || kind === 'anions') {
+        ions.forEach(p => {
+          if (kind !== 'ions' && (kind === 'cations') !== (p.sp.charge > 0)) return;
+          const [x, y] = px(p, L); ring(x, y, ionR(p) + 5 * s);
+        });
+      } else if (kind === 'cathode' || kind === 'anode') {
+        const E = L[kind];
+        g.alpha(a, () => g.roundRect(E.x - 5 * s, E.y - 5 * s, E.w + 10 * s, E.h + 10 * s, 4 * s, null, col, 3 * s));
+      } else if (kind === 'negTerminal' || kind === 'posTerminal') {
+        const [x, y] = terminalPos(L, kind === 'negTerminal'); ring(x, y, 15 * s);
+      } else if (kind === 'terminals') {
+        [true, false].forEach(neg => { const [x, y] = terminalPos(L, neg); ring(x, y, 15 * s); });
+      } else if (kind === 'electrodes') {
+        ['cathode', 'anode'].forEach(k => { const E = L[k]; g.alpha(a, () => g.roundRect(E.x - 5 * s, E.y - 5 * s, E.w + 10 * s, E.h + 10 * s, 4 * s, null, col, 3 * s)); });
+      }
+    }
+
+    function wrapF(text, maxW, o) {
+      const words = text.split(' '), lines = []; let cur = '';
+      words.forEach(w => {
+        const t = cur ? cur + ' ' + w : w;
+        if (g.formulaWidth(t, o) > maxW && cur) { lines.push(cur); cur = w; } else cur = t;
+      });
+      if (cur) lines.push(cur);
+      return lines;
+    }
+
+    function drawBtn(r, label, primary, disabled, d, s) {
+      const ts = d['text.size'] * s;
+      g.alpha(disabled ? 0.35 : 1, () => {
+        g.roundRect(r.x, r.y, r.w, r.h, 8 * s, primary ? '#2563eb' : '#ffffff', primary ? '#2563eb' : g.withAlpha(d['colour.text'], 0.35), 1.5 * s);
+        g.text(r.x + r.w / 2, r.y + r.h / 2, label, { font: d['text.font'], size: ts, color: primary ? '#ffffff' : d['colour.text'], align: 'center', weight: '700' });
+      });
+    }
+
+    function flowNumber(i) { return steps[i].num || 0; }
+    function stepLabel(i) {
+      const base = steps[i].flow ? 'Step ' + flowNumber(i) + (steps[i].sub || '') : ({ start: 'Start', intro: 'The ions', finish: 'Finish' }[steps[i].key] || '');
+      return isStudy() ? base + '   ·   Score ' + score.right + ' / ' + score.total : base;
+    }
+
+    function drawFlow(L, d) {
+      const s = L.s, font = d['text.font'], text = d['colour.text'];
+      const useFull = d['text.flowText'] === 'full';
+      ['cathode', 'anode'].forEach(side => {
+        const col = L.flow[side];
+        const items = [];
+        for (let i = 0; i < storyStep; i++) {
+          const st = steps[i];
+          if (st.flow && st.flow[side]) items.push({ n: flowNumber(i), label: useFull ? st.text : st.flow[side] });
+        }
+        if (!items.length) return;
+        let size = d['text.flowSize'] * s;
+        const pad = 6 * s, gapY = 14 * s, badge = () => size * 1.1;
+        let boxes;
+        for (;;) {
+          const o = { font, size, color: text };
+          boxes = items.map(it => {
+            const lines = wrapF(it.label, col.w - 2 * pad - badge() - 6 * s, o);
+            return { it, lines, h: Math.max(badge() + 2 * pad, lines.length * size * 1.22 + 2 * pad) };
+          });
+          const total = boxes.reduce((a, b) => a + b.h, 0) + gapY * (boxes.length - 1);
+          if (total <= col.h || size <= 7) break;
+          size *= 0.92;
+        }
+        let y = col.y;
+        boxes.forEach((b, idx) => {
+          const accent = side === 'cathode' ? '#2563eb' : '#dc2626';
+          g.roundRect(col.x, y, col.w, b.h, 6 * s, g.withAlpha(accent, 0.07), g.withAlpha(accent, 0.5), 1.2 * s);
+          const bx = col.x + pad + badge() / 2, by = y + pad + badge() / 2;
+          g.circle(bx, by, badge() / 2, accent);
+          g.text(bx, by, String(b.it.n), { font, size: size * 0.8, color: '#fff', align: 'center', weight: '800' });
+          const tx = col.x + pad + badge() + 6 * s;
+          const ty0 = y + pad + size * 0.6;
+          b.lines.forEach((ln, i) => g.formula(tx, ty0 + i * size * 1.22, ln, { font, size, color: text }));
+          if (idx < boxes.length - 1) {
+            const ax = col.x + col.w / 2;
+            g.arrow(ax, y + b.h + 2 * s, ax, y + b.h + gapY - 2 * s, g.withAlpha(text, 0.5), 2 * s, 6 * s);
+          }
+          y += b.h + gapY;
+        });
+      });
+    }
+
+    function drawStory(L, d) {
+      const s = L.s, ts = d['text.size'] * s, font = d['text.font'], text = d['colour.text'];
+      const st = steps[storyStep];
+      const bx = g.w * 0.02, by = g.h * 0.855, bw = g.w * 0.96, bh = g.h * 0.135;
+      g.roundRect(bx, by, bw, bh, 8 * s, g.withAlpha(text, 0.05), g.withAlpha(text, 0.18), 1);
+      const btnW = Math.max(74 * s, ts * 4.6), btnH = Math.min(bh * 0.6, 48 * s), gap = 8 * s;
+      const nextR = { x: bx + bw - gap - btnW, y: by + (bh - btnH) / 2, w: btnW, h: btnH };
+      const backR = { x: nextR.x - gap - btnW * 0.8, y: nextR.y, w: btnW * 0.8, h: btnH };
+      btnRects = { next: nextR, back: backR };
+      const last = storyStep === steps.length - 1;
+      drawBtn(nextR, last ? 'Restart' : 'Next ›', true, false, d, s);
+      drawBtn(backR, '‹ Back', false, storyStep === 0, d, s);
+      g.text(bx + 12 * s, by + ts * 0.85, stepLabel(storyStep), { font, size: ts * 0.7, color: g.withAlpha(text, 0.6), weight: '700' });
+      const textW = backR.x - bx - 24 * s;
+      const o = { font, size: ts * 0.95, color: text };
+      let lines = wrapF(st.text, textW, o);
+      while (lines.length > 3 && o.size > 8) { o.size *= 0.92; lines = wrapF(st.text, textW, o); }
+      const lh = o.size * 1.22, y0 = by + ts * 1.55 + o.size * 0.55;
+      lines.forEach((ln, i) => g.formula(bx + 12 * s, y0 + i * lh, ln, o));
+    }
+
+    function drawElectrons(path, L, d, upward) {
+      const s = L.s, es = d['motion.electronSize'], spacing = Math.max(26 * s, 34 * s * es), col = d['colour.electron'];
+      const segs = []; let total = 0;
+      for (let i = 1; i < path.length; i++) {
+        const len = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+        segs.push({ a: path[i - 1], b: path[i], len }); total += len;
+      }
+      const offset = (electronPhase * 60 * s) % spacing;
+      const dotR = 4 * s * es;
+      for (let dist = offset; dist < total; dist += spacing) {
+        let rem = dist;
+        for (const sg of segs) {
+          if (rem <= sg.len) {
+            const t = rem / sg.len;
+            const x = sg.a[0] + (sg.b[0] - sg.a[0]) * t, y = sg.a[1] + (sg.b[1] - sg.a[1]) * t;
+            g.circle(x, y, dotR, col, g.darken(col, 0.4), 1);
+            if (dotR > 3.5) g.formula(x, y, 'e^-', { size: dotR * 1.3, color: '#1f2937', align: 'center', weight: '700' });
+            break;
+          }
+          rem -= sg.len;
+        }
+      }
+      // direction arrow on the vertical leg
+      const vert = segs.find(sg => Math.abs(sg.a[0] - sg.b[0]) < 1);
+      if (vert) {
+        const ax = vert.a[0] + (L.cathode.side < 0 === (path === undefined) ? 0 : 0) + 12 * s;
+        const ay = (vert.a[1] + vert.b[1]) / 2;
+        const dir = upward ? -Math.PI / 2 : Math.PI / 2;
+        g.arrowHead(ax, ay, dir, g.withAlpha(d['colour.text'], 0.6), 7 * s);
+      }
+    }
+
+    function drawWater(L, d, c) {
+      const s = L.s, n = Math.min(waters.length, Math.round(d['motion.water']));
+      const r = d['ion.radius'] * 0.75 * s, col = d['colour.water'];
+      for (let i = 0; i < n; i++) {
+        const wm = waters[i];
+        const x = L.liquid.x + wm.u * L.liquid.w, y = L.liquid.y + wm.v * L.liquid.h;
+        g.alpha(0.35, () => {
+          g.circle(x, y, r, col);
+          g.circle(x + Math.cos(wm.a) * r * 0.9, y + Math.sin(wm.a) * r * 0.9, r * 0.5, '#e2e8f0');
+          g.circle(x + Math.cos(wm.a + 1.8) * r * 0.9, y + Math.sin(wm.a + 1.8) * r * 0.9, r * 0.5, '#e2e8f0');
+        });
+        if (c.labels !== 'none') g.alpha(0.6, () => g.formula(x, y, 'H_2O', { font: d['text.font'], size: r * 0.9, color: '#1e3a8a', align: 'center', weight: '600' }));
+      }
+    }
+
+    function drawIon(p, L, d, c) {
+      const s = L.s, dur = d['motion.discharge'];
+      let scale = 1;
+      if (p.state === 'emerging') scale = Math.min(1, p.t / 0.5);
+      if (p.state === 'discharging') scale = Math.max(0.15, 1 - 0.85 * Math.pow(p.t / dur, 2));
+      const r = ionR(p) * scale;
+      const [x, y] = px(p, L);
+      const col = d['ion.' + p.k + '.colour'];
+      if (p.state === 'discharging' && d['layout.glow']) {
+        const k = p.t / dur;
+        g.alpha(0.5 * (1 - k), () => g.circle(x, y, ionR(p) * (1.2 + k * 1.2), col));
+      }
+      g.circle(x, y, r, col, d['ion.outline'] ? g.darken(col, 0.35) : null, 1.2 * s);
+      const mode = c.labels;
+      if (r > 5 && (mode === 'formula' || mode === 'both')) {
+        g.formulaFit(x, y, p.sp.formula, { font: d['text.font'], size: r * 0.95, color: g.contrastText(col), align: 'center', weight: '700' }, r * 1.75);
+      }
+      if (mode === 'name' || mode === 'both') {
+        const ts = d['text.size'] * s * d['ion.nameSize'];
+        g.text(x, y + r + ts * 0.7, p.sp.name, { font: d['text.font'], size: ts, color: d['colour.text'], align: 'center' });
+      }
+      if (mode === 'name' && r > 5) {
+        g.formulaFit(x, y, p.sp.charge > 0 ? (p.sp.charge > 1 ? p.sp.charge + '+' : '+') : (p.sp.charge < -1 ? (-p.sp.charge) + '−' : '−'),
+          { font: d['text.font'], size: r, color: g.contrastText(col), align: 'center', weight: '700' }, r * 1.6);
+      }
+      // electron transfer during discharge
+      if (p.state === 'discharging') {
+        const E = L[p.electrode];
+        const n = Math.abs(p.sp.charge);
+        const ex = E.cx + p.side * E.w / 2;
+        const ecol = d['colour.electron'], er = 4 * s * d['motion.electronSize'];
+        for (let k = 0; k < n; k++) {
+          let t = (p.t - k * 0.12) / (dur * 0.7);
+          if (t < 0 || t > 1) continue;
+          if (p.electrode === 'anode') t = 1 - t;   // electrons leave the ion into the anode
+          const bx = ex + (x - ex) * t, by = y + (k - (n - 1) / 2) * er * 1.8;
+          g.circle(bx, by, er, ecol, g.darken(ecol, 0.4), 1);
+          g.formula(bx, by, 'e^-', { size: er * 1.3, color: '#1f2937', align: 'center', weight: '700' });
+        }
+      }
+    }
+
+    function drawBubble(b, L, d, c, hidden) {
+      const s = L.s;
+      const x = b.x0 + Math.sin(b.phase) * 3 * s;
+      const col = hidden ? '#d1d5db' : productColour(b.k);
+      g.alpha(0.9, () => g.circle(x, b.y, b.r, col, g.darken(col, 0.35), 1.2 * s));
+      g.alpha(0.6, () => g.circle(x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.25, '#ffffff'));
+      if (!hidden && c.labels !== 'none' && b.r > 7 * s) {
+        g.formulaFit(x, b.y, SPECIES[b.k].product.formula, { font: d['text.font'], size: b.r * 1.1, color: g.contrastText(col), align: 'center', weight: '700' }, b.r * 1.7);
+      }
+    }
+
+    function drawProducts(E, L, d, hidden) {
+      const s = L.s, el = L[E], ts = d['text.size'] * s, font = d['text.font'];
+      let prod, k;
+      if (E === 'anode' && R.anodeDissolves) prod = COPPER_ANODE;
+      else { k = R[E]; prod = k && SPECIES[k].product; }
+      if (!prod) return;
+      const count = counts[E];
+      if (prod.type === 'gas' && gasCloud[E] > 0) {
+        const col = hidden ? '#d1d5db' : productColour(k);
+        const cx = el.cx, cy = L.liquid.y - 12 * s;
+        g.alpha(gasCloud[E] * (prod.vapour ? 0.85 : 0.6), () => {
+          g.ellipse(cx, cy, 42 * s, 12 * s, col);
+          g.ellipse(cx - 20 * s, cy - 6 * s, 22 * s, 10 * s, col);
+          g.ellipse(cx + 22 * s, cy - 5 * s, 20 * s, 9 * s, col);
+        });
+      }
+      if (hidden || !d['text.showProductLabels'] || count === 0) return;
+      let label;
+      if (prod.type === 'dissolve') label = 'anode dissolves';
+      else label = prod.name + (prod.vapour ? ' vapour' : prod.type === 'gas' ? ' gas' : '') + ' (' + prod.formula + ')';
+      const o = { font, size: ts * 0.95, color: d['colour.text'], align: 'center', weight: '600' };
+      const lw = g.formulaWidth(label, o) + 16 * s, ly = L.liquid.y - 46 * s;
+      g.roundRect(el.cx - lw / 2, ly - ts * 0.75, lw, ts * 1.5, 6 * s, g.withAlpha(d['colour.background'], 0.85));
+      g.formula(el.cx, ly, label, o);
+    }
+
+    function drawEquations(L, d, c, hidden) {
+      const s = L.s, font = d['text.font'], es = d['text.equationSize'] * s, ts = d['text.size'] * s;
+      ['cathode', 'anode'].forEach(E => {
+        const el = L[E];
+        let prod, k;
+        if (E === 'anode' && R.anodeDissolves) prod = COPPER_ANODE; else { k = R[E]; prod = k && SPECIES[k].product; }
+        if (!prod) return;
+        if (c.equations !== 'off' && shownEq[E] && !hidden) {
+          g.formulaFit(el.cx, L.eqY, prod.eq, { font, size: es, color: d['colour.text'], align: 'center', weight: '600' }, g.w * 0.46);
+        }
+        if (d['text.showCounters'] && counts[E] > 0 && !hidden) {
+          const unit = prod.type === 'metal' ? 'atoms' : prod.type === 'dissolve' ? 'atoms dissolved' : 'molecules';
+          g.formula(el.cx, L.counterY, counts[E] + ' ' + prod.formula + ' ' + unit, { font, size: ts * 0.85, color: g.withAlpha(d['colour.text'], 0.7), align: 'center' });
+        }
+      });
+    }
+
+    ctx.canvas.el.addEventListener('pointerdown', ev => {
+      if (!isStory()) return;
+      const rect = ctx.canvas.el.getBoundingClientRect();
+      const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
+      const hit = r => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+      if (hit(btnRects.next)) action('next');
+      else if (hit(btnRects.back)) action('back');
+    });
+
+    return { reset, update, draw, action, onControl, get products() { return R; }, get step() { return storyStep; }, get stepCount() { return steps.length; }, get ionCount() { return ions.length; },
+      // free ions parked below their target electrode (debug metric for tools/verify.py)
+      get stuck() { const L = layout(); return ions.filter(p => { if (p.state !== 'free') return false; const [x, y] = px(p, L); const T = p.sp.charge > 0 ? L.cathode : L.anode; return y > T.y + T.h && Math.abs(T.cx - x) < T.w / 2 + ionR(p) * 2.5; }).length; },
+      get speciesCounts() { const o = {}; ions.forEach(p => { o[p.k] = (o[p.k] || 0) + 1; }); return o; },
+      questionFor, questionsFor, openQuestion };
+  }
+
+  Topics.register({
+    id: 'electrolysis',
+    title: 'Electrolysis',
+    description: 'Ions moving in molten and aqueous electrolytes, discharging at the electrodes.',
+    aspect: 0.64,
+    presets: PRESETS,
+    controls, designSchema, create,
+    rules, SPECIES,
+    resetControls(ctl) { ctl.set('power', false, true); }
+  });
+})();
+
+</script>
+<script>
+// Baked design overrides for the electrolysis topic.
+// Export a design from the Design panel and replace this file with the download.
+window.TopicDesigns = window.TopicDesigns || {};
+window.TopicDesigns["electrolysis"] = {};
+
+</script>
+<script>window.DEFAULT_TOPIC = 'electrolysis';</script>
+<script>App.boot(document.getElementById('app'));</script>
+</body>
+</html>

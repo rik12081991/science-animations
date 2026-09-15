@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embed test</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; }
+  iframe { width: 100%; height: 720px; border: 0; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+  button { font: inherit; padding: 8px 14px; margin: 4px; }
+</style>
+</head>
+<body>
+<h1>Revision site (pretend)</h1>
+<p>Some revision notes about electrolysis go here. The animation below is the built single file, embedded with an iframe.</p>
+<iframe id="sim" src="../dist/electrolysis.html?preset=brine"></iframe>
+<p>
+  <button onclick="send({cmd:'preset', id:'molten-pbbr2'})">Molten PbBr₂</button>
+  <button onclick="send({cmd:'preset', id:'cuso4-copper'})">CuSO₄ copper electrodes</button>
+  <button onclick="send({cmd:'control', id:'power', value:true})">Power on</button>
+  <button onclick="send({cmd:'control', id:'power', value:false})">Power off</button>
+  <button onclick="send({cmd:'pause'})">Pause</button>
+  <button onclick="send({cmd:'play'})">Play</button>
+</p>
+<pre id="log"></pre>
+<script>
+  const frame = document.getElementById('sim');
+  function send(m) { frame.contentWindow.postMessage(m, '*'); }
+  window.addEventListener('message', e => {
+    if (e.data && e.data.source === 'science-animations') document.getElementById('log').textContent += JSON.stringify(e.data) + '\n';
+  });
+</script>
+</body>
+</html>
