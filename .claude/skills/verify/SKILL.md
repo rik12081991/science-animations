@@ -9,7 +9,8 @@ Run from the project root. Output is one line per scenario; `ok` or `FAIL`.
 python3 tools/verify.py                          # smoke: brine steps + hard study check (~5 s)
 python3 tools/verify.py --preset cuso4-inert     # the preset you touched
 python3 tools/verify.py --preset brine --guide study --difficulty medium --check
-python3 tools/verify.py --all                    # full 7x3x2 matrix, only before a milestone
+python3 tools/verify.py --all                    # full matrix, only before a milestone
+python3 tools/verify.py --topic fuel-cell --all  # same for the fuel cell (2 presets)
 python3 tools/verify.py --preset brine --steps 3 --shot $SCRATCH/x.png   # visual change only
 ```
 

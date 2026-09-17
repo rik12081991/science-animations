@@ -2,3 +2,4 @@
 - [Dilute NaCl steps baseline](baseline_dilute_nacl_steps.md) — step 9 = "Step 4b" caption text re: dilute solution / OH- discharged
 - [CuSO4 inert free-run baseline](baseline_cuso4_inert_free.md) — 5s: ~4 Cu2+/thick cathode coating; 8s: ~7 Cu2+, clustered at cathode not spread
 - [CuSO4 inert steps baseline](baseline_cuso4_inert_steps.md) — step 5a discharge: no yellow e- transit dots ever render, at any --last value tried
+- [Fuel-cell baseline](baseline_fuel_cell.md) — acid step6 cathode/electrode-label layout, alkaline step2 anode look, free-run bulb/switch/counters

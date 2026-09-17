@@ -4,6 +4,7 @@
   python3 tools/verify.py                       quick smoke: brine, steps + study check
   python3 tools/verify.py --preset cuso4-inert  smoke one preset
   python3 tools/verify.py --all                 full matrix (8 presets x 3 difficulties x 2 electrode modes)
+  python3 tools/verify.py --topic fuel-cell     any of the above for another topic
   python3 tools/verify.py --preset brine --guide free --steps 0 --sim 5
   python3 tools/verify.py --preset brine --steps 3 --shot out.png [--width 640]
 
@@ -15,7 +16,8 @@ from urllib.parse import quote
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-PRESETS = ['molten-pbbr2', 'molten-nacl', 'molten-al2o3', 'brine', 'dilute-nacl', 'cuso4-inert', 'cuso4-copper', 'dilute-h2so4']
+PRESETS = {'electrolysis': ['molten-pbbr2', 'molten-nacl', 'molten-al2o3', 'brine', 'dilute-nacl', 'cuso4-inert', 'cuso4-copper', 'dilute-h2so4'],
+           'fuel-cell': ['acid', 'alkaline']}
 SCRATCH = os.environ.get('CLAUDE_SCRATCHPAD') or tempfile.gettempdir()
 
 def build(topic):
@@ -52,7 +54,7 @@ def main():
     harness = build(a.topic)
     scenarios = []
     if a.all:
-        for p in PRESETS:
+        for p in PRESETS[a.topic]:
             for e in ['one', 'both']:
                 scenarios.append({'preset': p, 'guide': 'steps', 'electrodes': e, 'steps': 12, 'sim': 1})
                 for d in ['easy', 'medium', 'hard']:
@@ -67,8 +69,9 @@ def main():
         for kv in a.param: k, v = kv.split('=', 1); s[k] = v
         scenarios.append(s)
     else:
-        scenarios = [{'preset': 'brine', 'guide': 'steps', 'steps': 12, 'sim': 1},
-                     {'preset': 'brine', 'guide': 'study', 'difficulty': 'hard', 'check': 1}]
+        p0 = PRESETS[a.topic][3 if a.topic == 'electrolysis' else 0]
+        scenarios = [{'preset': p0, 'guide': 'steps', 'steps': 12, 'sim': 1},
+                     {'preset': p0, 'guide': 'study', 'difficulty': 'hard', 'check': 1}]
     failed = 0
     for s in scenarios:
         label = ' '.join(f'{k}={v}' for k, v in s.items() if v is not None)
