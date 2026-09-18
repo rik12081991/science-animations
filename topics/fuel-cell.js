@@ -405,8 +405,10 @@
       // equations (free mode) and story chrome
       if (!story && c.equations !== 'off') {
         const es = d['text.equationSize'] * s, ey = g.h * 0.9;
-        if (c.equations === 'always' || shownEq.anode) g.formula(L.anode.cx, ey, preset.anodeEq, { font, size: es, color: text, align: 'center', weight: '600' });
-        if (c.equations === 'always' || shownEq.cathode) g.formula(L.cathode.cx, ey, preset.cathodeEq, { font, size: es, color: text, align: 'center', weight: '600' });
+        // one equation per half of the canvas, labelled, shrunk to fit, so the two never run into each other
+        const half = g.w * 0.46, o = { font, size: es, color: text, align: 'center', weight: '600' };
+        if (c.equations === 'always' || shownEq.anode) g.formulaFit(g.w * 0.26, ey, 'Anode:  ' + preset.anodeEq, o, half);
+        if (c.equations === 'always' || shownEq.cathode) g.formulaFit(g.w * 0.74, ey, 'Cathode:  ' + preset.cathodeEq, o, half);
       }
       if (story) { if (d['layout.showFlow']) drawFlow(L, d); drawStory(L, d); }
     }

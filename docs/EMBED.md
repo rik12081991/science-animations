@@ -27,7 +27,7 @@ Inside an iframe the page switches to embed mode automatically (no header, no de
 | `autoplay` | `0` | Start paused |
 | `guide` | `steps` / `study` / `free` | Step-by-step (default), study with questions, or free-running |
 | `difficulty` | `easy` / `medium` / `hard` | Study mode question difficulty |
-| `electrodes` | `one` / `both` | Step mode: one electrode at a time (default) or both together |
+| `electrodes` | `cathode` / `anode` / `both` | Step and study modes: show one half of the cell (that electrode, its wire, flow column and questions) or both (default) |
 | `power` | `1` | Start with the power switched on (free mode) |
 | `labels` | `formula` `name` `both` `none` | Ion label style |
 | `equations` | `auto` `always` `off` | Half-equation display |

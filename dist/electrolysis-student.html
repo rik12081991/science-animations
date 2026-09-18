@@ -1,3 +1,1139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f8fafc">
+<title>Electrolysis · Science Animations</title>
+<style>
+:root {
+  --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #64748b;
+  --accent: #2563eb; --border: #e2e8f0; --radius: 12px;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; overflow-x: hidden; background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px; -webkit-text-size-adjust: 100%;
+}
+#app { max-width: 1200px; margin: 0 auto; padding: 12px 16px 40px; }
+.app-header { display: flex; align-items: center; gap: 12px; padding: 4px 0 10px; }
+.app-title { font-size: 1.25rem; margin: 0; flex: 1; }
+.app-back { color: var(--accent); text-decoration: none; font-weight: 600; padding: 8px 0; }
+.stage { position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sim-canvas { display: block; touch-action: none; }
+
+.transport { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 0; }
+.transport .speed { display: flex; align-items: center; gap: 8px; margin-left: auto; font-weight: 600; flex: 1 1 180px; min-width: 0; max-width: 260px; }
+.transport input[type=range] { flex: 1; min-width: 60px; width: auto; }
+
+.btn {
+  min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel); font: inherit; font-weight: 600; color: var(--text); cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn:active { transform: scale(0.98); }
+
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 10px; }
+.panel > summary { padding: 14px 16px; font-weight: 700; cursor: pointer; list-style: none; display: flex; align-items: center; }
+.panel > summary::-webkit-details-marker { display: none; }
+.panel > summary::after { content: '›'; margin-left: auto; font-size: 1.4rem; line-height: 1; transition: transform .15s; }
+.panel[open] > summary::after { transform: rotate(90deg); }
+.panel-body { padding: 0 16px 16px; }
+
+.ctl-root { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 20px; }
+.ctl-group {
+  border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px 12px; margin: 4px 0 0; grid-column: 1 / -1;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 20px;
+}
+.ctl-group > legend { font-weight: 700; color: var(--muted); font-size: .85rem; padding: 0 6px; }
+[hidden] { display: none !important; }
+.ctl-row { min-width: 0; display: flex; flex-direction: column; gap: 4px; min-height: 44px; justify-content: center; }
+.ctl-row.ctl-inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.ctl-label { font-weight: 600; }
+.ctl-head { display: flex; justify-content: space-between; align-items: baseline; }
+.ctl-value { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+input[type=range] { width: 100%; height: 44px; margin: 0; accent-color: var(--accent); }
+input[type=color] { width: 64px; height: 40px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; background: #fff; flex: none; }
+input[type=text] { min-height: 44px; font: inherit; border-radius: 10px; border: 1px solid var(--border); padding: 0 10px; }
+select { max-width: 100%; min-height: 44px; font: inherit; border-radius: 10px; border: 1px solid var(--border); padding: 0 10px; background: #fff; color: var(--text); }
+
+.ctl-switch {
+  appearance: none; -webkit-appearance: none; width: 52px; height: 32px; border-radius: 16px;
+  background: #cbd5e1; position: relative; cursor: pointer; flex: none; margin: 0; outline-offset: 2px;
+}
+.ctl-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.ctl-switch:checked { background: var(--accent); }
+.ctl-switch:checked::after { left: 23px; }
+
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button {
+  min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: #fff; font: inherit; color: var(--text); cursor: pointer;
+}
+.seg button[aria-pressed=true] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.design-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; width: 100%; }
+.design-tools textarea { width: 100%; min-height: 140px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; border-radius: 8px; border: 1px solid var(--border); padding: 8px; }
+
+.launcher { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.launch-card { display: block; padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); }
+.launch-title { font-weight: 700; font-size: 1.1rem; }
+.launch-desc { color: var(--muted); margin-top: 4px; }
+
+body.embed #app { padding: 6px 8px 12px; max-width: none; }
+body.embed .app-header { padding-bottom: 6px; }
+body.focus .app-header, body.focus .panel-design { display: none; }
+body.focus #app { max-width: none; padding: 6px 8px; }
+body.focus .stage { border-radius: 0; }
+#app:fullscreen { background: var(--bg); overflow: auto; }
+.focus-exit { display: none; }
+body.focus .focus-exit { display: inline-block; }
+
+.stage-overlay { position: absolute; inset: 0; pointer-events: none; }
+.q-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, .35); pointer-events: auto; padding: 12px; }
+.q-card { background: #fff; color: var(--text); border-radius: 14px; padding: 18px 20px; width: min(600px, 100%); max-height: 100%; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.q-prompt { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+.q-hint { color: var(--muted); margin-bottom: 8px; }
+.q-opts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.q-opt { min-height: 46px; padding: 0 16px; border: 2px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); font: inherit; font-size: 1.05rem; cursor: pointer; }
+.q-opt[aria-pressed=true] { border-color: var(--accent); background: #dbeafe; }
+.q-opt.wrong { border-color: #dc2626; background: #fee2e2; }
+.q-opt.right { border-color: #16a34a; background: #dcfce7; }
+.q-typed { display: flex; gap: 8px; margin: 12px 0; }
+.q-input { flex: 1; min-width: 0; min-height: 46px; font: inherit; font-size: 1.1rem; padding: 0 12px; border: 2px solid var(--border); border-radius: 10px; }
+.q-input.wrong { border-color: #dc2626; }
+.q-input.right { border-color: #16a34a; }
+.q-feedback { min-height: 1.4em; font-weight: 600; margin: 4px 0 8px; }
+.q-feedback.bad { color: #b91c1c; }
+.q-feedback.good { color: #15803d; }
+.q-answer { font-weight: 600; margin: 4px 0; }
+.q-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-match { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 12px 0; }
+.q-col { display: flex; flex-direction: column; gap: 8px; }
+.q-match .q-opt { text-align: left; padding: 8px 12px; line-height: 1.3; }
+.q-pair { display: block; font-size: .9em; color: var(--accent); font-weight: 600; }
+.q-opt.right .q-pair { color: #15803d; }
+.q-opt.wrong .q-pair { color: #b91c1c; }
+.q-field-label { font-weight: 600; margin-top: 8px; }
+@media (max-width: 520px) { .q-match { grid-template-columns: 1fr; } }
+
+.q-gaps { margin: 12px 0 4px; }
+.q-sentence { font-size: 1.1rem; line-height: 2.4; padding: 2px 8px; border-radius: 8px; }
+.q-sentence.right { background: #dcfce7; }
+.q-sentence.wrong { background: #fee2e2; }
+.q-blank { min-width: 90px; min-height: 40px; margin: 0 4px; padding: 0 10px; border: 2px dashed var(--border); border-radius: 8px; background: #fff; font: inherit; color: var(--muted); cursor: pointer; vertical-align: middle; }
+.q-blank.filled { border-style: solid; color: var(--text); font-weight: 600; }
+.q-blank[aria-pressed=true] { border-color: var(--accent); background: #dbeafe; }
+.q-bank .q-opt { font-weight: 600; }
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// Topic registry. Each topic file calls Topics.register({...}) once.
+// Contract:
+//   id            unique string, also the file name in topics/
+//   title         shown in header and launcher
+//   aspect        canvas height / width (default 0.64)
+//   presets       [{id, title, ...}]  named starting states
+//   controls      schema for the teaching panel (see core/controls.js)
+//   designSchema  schema for the design panel (see core/design.js)
+//   create(ctx)   returns { reset(presetId), update(dt), draw(), action(id) }
+//                 ctx = { g, canvas, controls, design }
+(function () {
+  const topics = {};
+  const order = [];
+  window.Topics = {
+    register(def) {
+      if (!def || !def.id) throw new Error('Topic needs an id');
+      topics[def.id] = def;
+      if (!order.includes(def.id)) order.push(def.id);
+    },
+    get(id) { return topics[id]; },
+    list() { return order.map(id => topics[id]); }
+  };
+})();
+
+</script>
+<script>
+// HiDPI canvas plus drawing helpers. All coordinates are CSS pixels.
+(function () {
+  function create(container, opts) {
+    opts = opts || {};
+    const aspect = opts.aspect || 0.64;
+    const el = document.createElement('canvas');
+    el.className = 'sim-canvas';
+    container.appendChild(el);
+    const ctx = el.getContext('2d');
+    const api = { el, ctx, w: 0, h: 0, dpr: 1, resize, onResize: null };
+    function resize() {
+      const cssW = container.clientWidth || 800;
+      const cssH = Math.round(cssW * aspect);
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      if (cssW === api.w && cssH === api.h && dpr === api.dpr) return;
+      api.w = cssW; api.h = cssH; api.dpr = dpr;
+      el.style.width = cssW + 'px';
+      el.style.height = cssH + 'px';
+      el.width = Math.round(cssW * dpr);
+      el.height = Math.round(cssH * dpr);
+      if (api.onResize) api.onResize(cssW, cssH);
+    }
+    window.addEventListener('resize', resize);
+    if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(resize)).observe(container);
+    resize();
+    return api;
+  }
+
+  function hexToRgb(hex) {
+    hex = (hex || '#000000').replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const n = parseInt(hex, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function withAlpha(hex, a) {
+    if (hex.startsWith('rgb')) return hex;
+    const [r, g, b] = hexToRgb(hex);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  function contrastText(hex) {
+    const [r, g, b] = hexToRgb(hex);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#111827' : '#ffffff';
+  }
+  function darken(hex, f) {
+    const [r, g, b] = hexToRgb(hex).map(v => Math.round(v * (1 - f)));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // Formula strings: "_" + digits = subscript, "^" + run = superscript.
+  //   "SO_4^2-"  "2H^+ + 2e^- → H_2"
+  function parseFormula(str) {
+    const parts = []; let i = 0, cur = '';
+    const flush = () => { if (cur) { parts.push({ t: 'main', s: cur }); cur = ''; } };
+    while (i < str.length) {
+      const ch = str[i];
+      if (ch === '_') {
+        flush(); let j = i + 1, s = '';
+        while (j < str.length && /[0-9]/.test(str[j])) { s += str[j]; j++; }
+        parts.push({ t: 'sub', s }); i = j;
+      } else if (ch === '^') {
+        flush(); let j = i + 1, s = '';
+        while (j < str.length && !' ),.;:'.includes(str[j])) { s += str[j]; j++; }
+        parts.push({ t: 'sup', s: s.replace(/-/g, '−') }); i = j;
+      } else { cur += ch; i++; }
+    }
+    flush();
+    return parts;
+  }
+
+  function G(canvas) {
+    const ctx = canvas.ctx;
+    const defaultFont = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    function fontStr(o) {
+      const fam = o.font && o.font !== 'system-ui' ? '"' + o.font + '", ' + defaultFont : defaultFont;
+      return (o.weight || '400') + ' ' + (o.size || 14) + 'px ' + fam;
+    }
+    function measureParts(parts, o) {
+      const size = o.size || 14, small = size * 0.68;
+      let w = 0;
+      parts.forEach(p => {
+        ctx.font = fontStr(Object.assign({}, o, { size: p.t === 'main' ? size : small }));
+        p.w = ctx.measureText(p.s).width; w += p.w;
+      });
+      return w;
+    }
+    const g = {
+      ctx,
+      get w() { return canvas.w; },
+      get h() { return canvas.h; },
+      withAlpha, contrastText, darken,
+      mix(a, b, k) {
+        const A = hexToRgb(a), B = hexToRgb(b); k = Math.max(0, Math.min(1, k));
+        return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',') + ')';
+      },
+      begin(bg) {
+        ctx.setTransform(canvas.dpr, 0, 0, canvas.dpr, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = bg || '#fff';
+        ctx.fillRect(0, 0, canvas.w, canvas.h);
+      },
+      alpha(a, fn) { const prev = ctx.globalAlpha; ctx.globalAlpha = prev * a; fn(); ctx.globalAlpha = prev; },
+      circle(x, y, r, fill, stroke, lw) {
+        if (r <= 0) return;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+      },
+      ellipse(x, y, rx, ry, fill) {
+        ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fillStyle = fill; ctx.fill();
+      },
+      rect(x, y, w, h, fill, stroke, lw) {
+        if (fill) { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.strokeRect(x, y, w, h); }
+      },
+      roundRect(x, y, w, h, r, fill, stroke, lw) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+      },
+      path(points, color, lw, dash) {
+        if (points.length < 2) return;
+        ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]);
+        for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+        ctx.strokeStyle = color; ctx.lineWidth = lw || 1; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]);
+      },
+      line(x1, y1, x2, y2, color, lw, dash) { g.path([[x1, y1], [x2, y2]], color, lw, dash); },
+      arrow(x1, y1, x2, y2, color, lw, head) {
+        head = head || 8;
+        g.line(x1, y1, x2, y2, color, lw);
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath(); ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(a - 0.5), y2 - head * Math.sin(a - 0.5));
+        ctx.lineTo(x2 - head * Math.cos(a + 0.5), y2 - head * Math.sin(a + 0.5));
+        ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+      },
+      arrowHead(x, y, angle, color, size) {
+        ctx.beginPath(); ctx.moveTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
+        ctx.lineTo(x + size * Math.cos(angle + 2.5), y + size * Math.sin(angle + 2.5));
+        ctx.lineTo(x + size * Math.cos(angle - 2.5), y + size * Math.sin(angle - 2.5));
+        ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+      },
+      text(x, y, str, o) {
+        o = o || {};
+        ctx.font = fontStr(o); ctx.fillStyle = o.color || '#000';
+        ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.baseline || 'middle';
+        ctx.fillText(str, x, y);
+        return ctx.measureText(str).width;
+      },
+      textWidth(str, o) { ctx.font = fontStr(o || {}); return ctx.measureText(str).width; },
+      formula(x, y, str, o) {
+        o = o || {};
+        const parts = parseFormula(str);
+        const total = measureParts(parts, o);
+        const size = o.size || 14, small = size * 0.68;
+        let cx = x;
+        if (o.align === 'center') cx = x - total / 2; else if (o.align === 'right') cx = x - total;
+        ctx.textAlign = 'left'; ctx.textBaseline = o.baseline || 'middle'; ctx.fillStyle = o.color || '#000';
+        parts.forEach(p => {
+          const isMain = p.t === 'main';
+          ctx.font = fontStr(Object.assign({}, o, { size: isMain ? size : small }));
+          const dy = p.t === 'sub' ? size * 0.28 : p.t === 'sup' ? -size * 0.42 : 0;
+          ctx.fillText(p.s, cx, y + dy); cx += p.w;
+        });
+        return total;
+      },
+      formulaWidth(str, o) { return measureParts(parseFormula(str), o || {}); },
+      // Draw a formula, shrinking the font until it fits maxWidth.
+      formulaFit(x, y, str, o, maxWidth) {
+        o = Object.assign({}, o);
+        let w = g.formulaWidth(str, o);
+        while (w > maxWidth && o.size > 6) { o.size *= 0.9; w = g.formulaWidth(str, o); }
+        return g.formula(x, y, str, o);
+      }
+    };
+    return g;
+  }
+  window.SimCanvas = { create, G, withAlpha, contrastText };
+})();
+
+</script>
+<script>
+// Animation loop with fixed timestep, play/pause/step and a speed multiplier.
+(function () {
+  function create(hooks) {
+    const FIXED = 1 / 60, MAX_FRAME = 0.1;
+    let playing = false, speed = 1, last = 0, acc = 0, raf = null, time = 0;
+    function frame(ts) {
+      raf = requestAnimationFrame(frame);
+      const now = ts / 1000;
+      let dt = last ? now - last : 0;
+      last = now;
+      if (dt > MAX_FRAME) dt = MAX_FRAME;
+      if (playing) {
+        acc += dt * speed;
+        let n = 0;
+        while (acc >= FIXED && n < 10) { hooks.update(FIXED); time += FIXED; acc -= FIXED; n++; }
+        if (n >= 10) acc = 0;
+      }
+      hooks.draw();
+    }
+    const api = {
+      start() { if (!raf) raf = requestAnimationFrame(frame); },
+      stop() { if (raf) cancelAnimationFrame(raf); raf = null; last = 0; },
+      play() { playing = true; },
+      pause() { playing = false; },
+      toggle() { playing = !playing; api.onChange && api.onChange(); return playing; },
+      step() { playing = false; for (let i = 0; i < 6; i++) { hooks.update(FIXED); time += FIXED; } api.onChange && api.onChange(); },
+      setSpeed(s) { speed = s; },
+      get speed() { return speed; },
+      get playing() { return playing; },
+      get time() { return time; },
+      onChange: null
+    };
+    return api;
+  }
+  window.Engine = { create };
+})();
+
+</script>
+<script>
+// Small helpers for particle motion. Positions and velocities in pixels.
+(function () {
+  const P = {
+    rand(a, b) { return a + Math.random() * (b - a); },
+    pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+    // Random acceleration plus damping (Brownian-ish wobble).
+    wander(p, jitter, dt, damping) {
+      p.vx += (Math.random() - 0.5) * jitter * dt;
+      p.vy += (Math.random() - 0.5) * jitter * dt;
+      const d = Math.exp(-(damping == null ? 2.2 : damping) * dt);
+      p.vx *= d; p.vy *= d;
+    },
+    clampSpeed(p, max) {
+      const s = Math.hypot(p.vx, p.vy);
+      if (s > max) { p.vx *= max / s; p.vy *= max / s; }
+    },
+    // Keep p inside rect {x,y,w,h} with radius r; bounce softly.
+    confine(p, rect, r, bounce) {
+      bounce = bounce == null ? 0.5 : bounce;
+      if (p.x < rect.x + r) { p.x = rect.x + r; p.vx = Math.abs(p.vx) * bounce; }
+      if (p.x > rect.x + rect.w - r) { p.x = rect.x + rect.w - r; p.vx = -Math.abs(p.vx) * bounce; }
+      if (p.y < rect.y + r) { p.y = rect.y + r; p.vy = Math.abs(p.vy) * bounce; }
+      if (p.y > rect.y + rect.h - r) { p.y = rect.y + rect.h - r; p.vy = -Math.abs(p.vy) * bounce; }
+    },
+    // Push overlapping particles apart. radiusOf(p) gives each radius. O(n^2), fine for n < 200.
+    separate(list, radiusOf, gap, canCollide) {
+      gap = gap || 2;
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i]; if (a.skip) continue;
+        const ra = radiusOf(a);
+        for (let j = i + 1; j < list.length; j++) {
+          const b = list[j]; if (b.skip) continue;
+          if (canCollide && !canCollide(a, b)) continue;
+          const rb = radiusOf(b);
+          let dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy), min = ra + rb + gap;
+          if (dist < min && dist > 0.001) {
+            const push = (min - dist) / 2; dx /= dist; dy /= dist;
+            a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push;
+          }
+        }
+      }
+    }
+  };
+  window.Particles = P;
+})();
+
+</script>
+<script>
+// Builds a panel of inputs from a schema. Used by both the teaching panel and the design panel.
+// Schema item: { id, type, label, default, group, min, max, step, unit, options, showIf(values) }
+// Types: toggle | range | select | segmented | colour | button | text
+(function () {
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function normOptions(opts) {
+    return opts.map(o => typeof o === 'string' ? { value: o, label: o.charAt(0).toUpperCase() + o.slice(1) } : o);
+  }
+  function fmt(v, item) {
+    if (item.format) return item.format(v);
+    const step = item.step || 1;
+    const dec = (String(step).split('.')[1] || '').length;
+    return Number(v).toFixed(dec) + (item.unit ? ' ' + item.unit : '');
+  }
+  let uid = 0;
+
+  function build(container, schema, initial, onChange) {
+    const values = Object.assign({}, initial);
+    const rows = [];
+    const groups = {};
+    const root = el('div', 'ctl-root');
+    container.appendChild(root);
+
+    function groupFor(name) {
+      if (!name) return root;
+      if (!groups[name]) {
+        const fs = el('fieldset', 'ctl-group');
+        fs.appendChild(el('legend', null, name));
+        root.appendChild(fs);
+        groups[name] = fs;
+      }
+      return groups[name];
+    }
+    function refreshVisibility() {
+      rows.forEach(r => { if (r.item.showIf) r.row.hidden = !r.item.showIf(values); });
+    }
+
+    schema.forEach(item => {
+      if (values[item.id] === undefined && item.default !== undefined) values[item.id] = item.default;
+      const row = el('div', 'ctl-row ctl-' + item.type);
+      row.dataset.id = item.id;
+      const label = el('label', 'ctl-label', item.label || item.id);
+      const id = 'ctl_' + (++uid);
+      let update = () => {};
+      const set = v => { values[item.id] = v; refreshVisibility(); if (onChange) onChange(item.id, v, values, item); };
+
+      switch (item.type) {
+        case 'toggle': {
+          const input = el('input', 'ctl-switch'); input.type = 'checkbox'; input.id = id;
+          input.checked = !!values[item.id];
+          input.addEventListener('change', () => set(input.checked));
+          label.htmlFor = id;
+          row.classList.add('ctl-inline'); row.appendChild(label); row.appendChild(input);
+          update = v => { input.checked = !!v; };
+          break;
+        }
+        case 'range': {
+          const input = el('input'); input.type = 'range'; input.id = id;
+          input.min = item.min; input.max = item.max; input.step = item.step || 1;
+          input.value = values[item.id];
+          const out = el('output', 'ctl-value', fmt(values[item.id], item));
+          input.addEventListener('input', () => { const v = parseFloat(input.value); out.textContent = fmt(v, item); set(v); });
+          label.htmlFor = id;
+          const head = el('div', 'ctl-head'); head.appendChild(label); head.appendChild(out);
+          row.appendChild(head); row.appendChild(input);
+          update = v => { input.value = v; out.textContent = fmt(v, item); };
+          break;
+        }
+        case 'select': {
+          const sel = el('select'); sel.id = id;
+          normOptions(item.options).forEach(o => {
+            const op = el('option', null, o.label); op.value = o.value; sel.appendChild(op);
+          });
+          sel.value = values[item.id];
+          sel.addEventListener('change', () => set(sel.value));
+          label.htmlFor = id;
+          row.appendChild(label); row.appendChild(sel);
+          update = v => { sel.value = v; };
+          break;
+        }
+        case 'segmented': {
+          const seg = el('div', 'seg');
+          const btns = [];
+          normOptions(item.options).forEach(o => {
+            const b = el('button', null, o.label); b.type = 'button';
+            b.setAttribute('aria-pressed', String(values[item.id] === o.value));
+            b.addEventListener('click', () => { set(o.value); update(o.value); });
+            btns.push([b, o.value]); seg.appendChild(b);
+          });
+          row.appendChild(label); row.appendChild(seg);
+          update = v => btns.forEach(([b, val]) => b.setAttribute('aria-pressed', String(val === v)));
+          break;
+        }
+        case 'colour': {
+          const input = el('input'); input.type = 'color'; input.id = id;
+          input.value = values[item.id] || '#000000';
+          input.addEventListener('input', () => set(input.value));
+          label.htmlFor = id;
+          row.classList.add('ctl-inline'); row.appendChild(label); row.appendChild(input);
+          update = v => { input.value = v; };
+          break;
+        }
+        case 'text': {
+          const input = el('input'); input.type = 'text'; input.id = id;
+          input.value = values[item.id] || '';
+          input.addEventListener('input', () => set(input.value));
+          label.htmlFor = id;
+          row.appendChild(label); row.appendChild(input);
+          update = v => { input.value = v; };
+          break;
+        }
+        case 'button': {
+          const b = el('button', 'btn' + (item.primary ? ' primary' : ''), item.label); b.type = 'button';
+          b.addEventListener('click', () => { if (onChange) onChange(item.id, true, values, item); });
+          row.appendChild(b);
+          break;
+        }
+        default:
+          row.appendChild(label);
+      }
+      groupFor(item.group).appendChild(row);
+      rows.push({ item, row, update });
+    });
+    refreshVisibility();
+
+    return {
+      values, root,
+      set(id, v, silent) {
+        const r = rows.find(x => x.item.id === id);
+        values[id] = v;
+        if (r) r.update(v);
+        refreshVisibility();
+        if (!silent && onChange && r) onChange(id, v, values, r.item);
+      },
+      setAll(obj, silent) { Object.keys(obj).forEach(k => this.set(k, obj[k], silent)); },
+      refresh: refreshVisibility
+    };
+  }
+  window.Controls = { build, el };
+})();
+
+</script>
+<script>
+// Design panel: every visual parameter as a live control, persisted per topic in localStorage.
+// Value precedence: schema defaults < baked (topics/<id>.design.js) < localStorage < URL ?design={...}
+(function () {
+  const KEY = id => 'sciAnim.design.' + id;
+  const el = Controls.el;
+
+  function defaults(schema) { const d = {}; schema.forEach(i => { if (i.default !== undefined) d[i.id] = i.default; }); return d; }
+  function load(id) { try { const s = localStorage.getItem(KEY(id)); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function save(id, v) { try { localStorage.setItem(KEY(id), JSON.stringify(v)); } catch (e) { /* private mode */ } }
+  function clear(id) { try { localStorage.removeItem(KEY(id)); } catch (e) { /* ignore */ } }
+  function diff(vals, base) { const d = {}; Object.keys(vals).forEach(k => { if (vals[k] !== base[k]) d[k] = vals[k]; }); return d; }
+  function extractJson(text) {
+    try { return JSON.parse(text); } catch (e) { /* fall through */ }
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a >= 0 && b > a) return JSON.parse(text.slice(a, b + 1));
+    throw new Error('No JSON object found');
+  }
+
+  function create(o) {
+    const base = Object.assign({}, defaults(o.schema), o.baked || {});
+    // locked (student build): the baked design is final; ignore saved and URL overrides
+    const stored = o.locked ? {} : (load(o.topicId) || {});
+    const init = Object.assign({}, base, stored, o.locked ? {} : (o.urlOverrides || {}));
+
+    const tools = el('div', 'design-tools');
+    o.container.appendChild(tools);
+    const panel = Controls.build(o.container, o.schema, init, (id, v, vals) => {
+      save(o.topicId, diff(vals, base));
+      if (o.onChange) o.onChange(id, v, vals);
+    });
+
+    function exportText() {
+      const json = JSON.stringify(panel.values, null, 2);
+      return '// Design for topic "' + o.topicId + '". Drop this file into topics/ as ' + o.topicId + '.design.js\n' +
+        'window.TopicDesigns = window.TopicDesigns || {};\n' +
+        'window.TopicDesigns["' + o.topicId + '"] = ' + json + ';\n';
+    }
+    function applyJson(obj) {
+      const clean = {};
+      Object.keys(obj).forEach(k => { if (k in base) clean[k] = obj[k]; });
+      panel.setAll(Object.assign({}, base, clean), true);
+      save(o.topicId, diff(panel.values, base));
+      if (o.onChange) o.onChange('*', null, panel.values);
+    }
+
+    const exportBtn = el('button', 'btn', 'Export design'); exportBtn.type = 'button';
+    const importBtn = el('button', 'btn', 'Import design'); importBtn.type = 'button';
+    const pasteBtn = el('button', 'btn', 'Show as text'); pasteBtn.type = 'button';
+    const resetBtn = el('button', 'btn', 'Reset design'); resetBtn.type = 'button';
+    const file = el('input'); file.type = 'file'; file.accept = '.js,.json,text/plain'; file.hidden = true;
+    const ta = el('textarea'); ta.hidden = true; ta.spellcheck = false;
+    const taBtns = el('div', 'design-tools'); taBtns.hidden = true;
+    const applyBtn = el('button', 'btn primary', 'Apply text'); applyBtn.type = 'button';
+    const copyBtn = el('button', 'btn', 'Copy'); copyBtn.type = 'button';
+    taBtns.appendChild(applyBtn); taBtns.appendChild(copyBtn);
+    [exportBtn, importBtn, pasteBtn, resetBtn, file].forEach(b => tools.appendChild(b));
+    tools.appendChild(ta); tools.appendChild(taBtns);
+
+    exportBtn.addEventListener('click', () => {
+      const blob = new Blob([exportText()], { type: 'text/javascript' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = o.topicId + '.design.js';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    });
+    importBtn.addEventListener('click', () => file.click());
+    file.addEventListener('change', () => {
+      const f = file.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => { try { applyJson(extractJson(String(rd.result))); } catch (e) { alert('Could not read design file: ' + e.message); } };
+      rd.readAsText(f); file.value = '';
+    });
+    pasteBtn.addEventListener('click', () => {
+      const show = ta.hidden; ta.hidden = !show; taBtns.hidden = !show;
+      if (show) { ta.value = exportText(); }
+      pasteBtn.textContent = show ? 'Hide text' : 'Show as text';
+    });
+    applyBtn.addEventListener('click', () => { try { applyJson(extractJson(ta.value)); } catch (e) { alert('Could not read design text: ' + e.message); } });
+    copyBtn.addEventListener('click', () => {
+      ta.select(); ta.setSelectionRange(0, ta.value.length);
+      try { navigator.clipboard.writeText(ta.value); } catch (e) { document.execCommand('copy'); }
+    });
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('Reset all design settings for this topic?')) return;
+      clear(o.topicId); panel.setAll(base, true);
+      if (o.onChange) o.onChange('*', null, panel.values);
+    });
+
+    return {
+      get values() { return panel.values; },
+      set: panel.set, base, applyJson, exportText
+    };
+  }
+  window.Design = { create };
+})();
+
+</script>
+<script>
+// Question overlay shown over the canvas. Reusable by any topic.
+// Quiz.ask(overlayEl, question, done)
+//   question = { prompt, hint,
+//                options: [{label, correct}], multi,             single or multi choice
+//             or match: { left: [{label, answer}], right: [label] }   click a left item then a right item
+//             or typed: {placeholder, check(text), answer}  or  typed: { fields: [{label, placeholder, check, answer}] } }
+//   done(firstTryCorrect) is called when the student gets it right or reveals the answer.
+(function () {
+  const el = Controls.el;
+
+  // "SO_4^2-" -> HTML with <sub>/<sup>
+  function formulaHTML(str) {
+    let out = '', i = 0;
+    const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    str = String(str);
+    while (i < str.length) {
+      const ch = str[i];
+      if (ch === '_') { let j = i + 1, s = ''; while (j < str.length && /[0-9]/.test(str[j])) { s += str[j]; j++; } out += '<sub>' + s + '</sub>'; i = j; }
+      else if (ch === '^') { let j = i + 1, s = ''; while (j < str.length && !' ),.;:'.includes(str[j])) { s += str[j]; j++; } out += '<sup>' + esc(s.replace(/-/g, '−')) + '</sup>'; i = j; }
+      else { out += esc(ch); i++; }
+    }
+    return out;
+  }
+
+  function ask(overlay, q, done) {
+    let attempts = 0;
+
+    function render() {
+      overlay.innerHTML = '';
+      const wrap = el('div', 'q-overlay');
+      const card = el('div', 'q-card');
+      wrap.appendChild(card);
+      overlay.appendChild(wrap);
+      const prompt = el('div', 'q-prompt'); prompt.innerHTML = formulaHTML(q.prompt); card.appendChild(prompt);
+      if (q.hint) { const h = el('div', 'q-hint'); h.innerHTML = formulaHTML(q.hint); card.appendChild(h); }
+      const feedback = el('div', 'q-feedback');
+      const actions = el('div', 'q-actions');
+      let finished = false;
+      let reveal = () => {};
+
+      function finish(firstTry) {
+        if (finished) return; finished = true;
+        const btn = el('button', 'btn primary', 'Continue ›'); btn.type = 'button';
+        btn.addEventListener('click', () => { overlay.innerHTML = ''; done(firstTry); });
+        actions.innerHTML = ''; actions.appendChild(btn); btn.focus();
+      }
+      function wrong() {
+        attempts++;
+        feedback.textContent = attempts === 1 ? 'Not quite.' : 'Still not right.';
+        feedback.className = 'q-feedback bad';
+        actions.innerHTML = '';
+        const again = el('button', 'btn primary', 'Try again'); again.type = 'button';
+        again.addEventListener('click', render);
+        actions.appendChild(again);
+        if (attempts >= 2) {
+          const rv = el('button', 'btn', 'Show answer'); rv.type = 'button';
+          rv.addEventListener('click', () => { reveal(); finish(false); });
+          actions.appendChild(rv);
+        }
+        lock();
+      }
+      function right() {
+        feedback.textContent = attempts === 0 ? 'Correct!' : 'Correct.';
+        feedback.className = 'q-feedback good';
+        finish(attempts === 0);
+      }
+      let lock = () => { finished = true; };
+
+      if (q.options) {
+        const opts = el('div', 'q-opts');
+        const btns = [];
+        q.options.forEach(o => {
+          const b = el('button', 'q-opt'); b.type = 'button'; b.innerHTML = formulaHTML(o.label);
+          b.setAttribute('aria-pressed', 'false');
+          b.addEventListener('click', () => {
+            if (finished) return;
+            if (q.multi) { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); return; }
+            if (o.correct) { b.classList.add('right'); right(); } else { b.classList.add('wrong'); wrong(); }
+          });
+          btns.push({ b, o }); opts.appendChild(b);
+        });
+        card.appendChild(opts);
+        if (q.multi) {
+          const check = el('button', 'btn primary', 'Check answer'); check.type = 'button';
+          check.addEventListener('click', () => {
+            if (finished) return;
+            const ok = btns.every(x => (x.b.getAttribute('aria-pressed') === 'true') === !!x.o.correct);
+            if (ok) { btns.forEach(x => { if (x.o.correct) x.b.classList.add('right'); }); right(); }
+            else { btns.forEach(x => { if ((x.b.getAttribute('aria-pressed') === 'true') !== !!x.o.correct) x.b.classList.add('wrong'); }); wrong(); }
+          });
+          actions.appendChild(check);
+        }
+        reveal = () => btns.forEach(x => { x.b.classList.remove('wrong'); if (x.o.correct) x.b.classList.add('right'); x.b.setAttribute('aria-pressed', String(!!x.o.correct)); });
+      } else if (q.gaps) {
+        // sentences: arrays of text pieces where '' is a blank; answers: per-sentence arrays of words; bank: words to pick from
+        const G = q.gaps;
+        const fills = G.sentences.map(sn => sn.filter(x => x === '').map(() => null));
+        let sel = null;                          // { si, bi }
+        const blankBtns = [];
+        const box = el('div', 'q-gaps');
+        const firstEmpty = () => { for (let si = 0; si < fills.length; si++) for (let bi = 0; bi < fills[si].length; bi++) if (fills[si][bi] == null) return { si, bi }; return null; };
+        const paint = () => blankBtns.forEach(({ b, si, bi }) => {
+          b.textContent = fills[si][bi] == null ? '______' : fills[si][bi];
+          b.classList.toggle('filled', fills[si][bi] != null);
+          b.setAttribute('aria-pressed', String(sel && sel.si === si && sel.bi === bi));
+        });
+        G.sentences.forEach((sn, si) => {
+          const line = el('div', 'q-sentence');
+          let bi = 0;
+          sn.forEach(piece => {
+            if (piece === '') {
+              const b = el('button', 'q-blank'); b.type = 'button';
+              const myBi = bi++;
+              b.addEventListener('click', () => { if (finished) return; if (fills[si][myBi] != null) fills[si][myBi] = null; sel = { si, bi: myBi }; paint(); });
+              blankBtns.push({ b, si, bi: myBi }); line.appendChild(b);
+            } else { const sp = el('span'); sp.innerHTML = formulaHTML(piece) + ' '; line.appendChild(sp); }
+          });
+          box.appendChild(line);
+        });
+        const bank = el('div', 'q-opts q-bank');
+        G.bank.forEach(w => {
+          const b = el('button', 'q-opt'); b.type = 'button'; b.innerHTML = formulaHTML(w);
+          b.addEventListener('click', () => { if (finished) return; if (!sel) sel = firstEmpty(); if (!sel) return; fills[sel.si][sel.bi] = w; sel = firstEmpty(); paint(); });
+          bank.appendChild(b);
+        });
+        card.appendChild(box); card.appendChild(bank);
+        sel = firstEmpty(); paint();
+        const lines = () => box.querySelectorAll('.q-sentence');
+        const check = el('button', 'btn primary', 'Check answer'); check.type = 'button';
+        check.addEventListener('click', () => {
+          if (finished) return;
+          if (firstEmpty()) { feedback.textContent = 'Fill every gap first.'; feedback.className = 'q-feedback'; return; }
+          const key = a => a.join('|');
+          let ok = true;
+          if (G.unordered) {
+            const remaining = G.answers.map(key);
+            fills.forEach((f, si) => { const k = key(f); const idx = remaining.indexOf(k); if (idx >= 0) { remaining.splice(idx, 1); lines()[si].classList.add('right'); } else { ok = false; lines()[si].classList.add('wrong'); } });
+          } else {
+            fills.forEach((f, si) => { const good = key(f) === key(G.answers[si]); if (!good) ok = false; lines()[si].classList.add(good ? 'right' : 'wrong'); });
+          }
+          if (ok) right(); else wrong();
+        });
+        actions.appendChild(check);
+        reveal = () => { G.answers.forEach((a, si) => { fills[si] = a.slice(); }); sel = null; paint(); lines().forEach(l => { l.classList.remove('wrong'); l.classList.add('right'); }); };
+      } else if (q.match) {
+        const box = el('div', 'q-match');
+        const colL = el('div', 'q-col'), colR = el('div', 'q-col');
+        box.appendChild(colL); box.appendChild(colR); card.appendChild(box);
+        const assign = {};                       // left index -> right index
+        let sel = null;                          // { side, idx }
+        const lefts = [], rights = [];
+        const paint = () => {
+          lefts.forEach((b, i) => {
+            b.setAttribute('aria-pressed', String(sel && sel.side === 'L' && sel.idx === i));
+            b.innerHTML = formulaHTML(q.match.left[i].label) + (assign[i] != null ? '<span class="q-pair">→ ' + formulaHTML(q.match.right[assign[i]]) + '</span>' : '');
+          });
+          rights.forEach((b, j) => b.setAttribute('aria-pressed', String(sel && sel.side === 'R' && sel.idx === j)));
+        };
+        const pick = (side, idx) => {
+          if (finished) return;
+          if (sel && sel.side !== side) {
+            const li = side === 'L' ? idx : sel.idx, ri = side === 'R' ? idx : sel.idx;
+            assign[li] = ri; sel = null;
+            const nextFree = q.match.left.findIndex((x, i) => assign[i] == null);
+            if (nextFree >= 0) sel = { side: 'L', idx: nextFree };
+          } else sel = (sel && sel.side === side && sel.idx === idx) ? null : { side, idx };
+          paint();
+        };
+        q.match.left.forEach((it, i) => { const b = el('button', 'q-opt q-left'); b.type = 'button'; b.addEventListener('click', () => pick('L', i)); lefts.push(b); colL.appendChild(b); });
+        q.match.right.forEach((lab, j) => { const b = el('button', 'q-opt q-right'); b.type = 'button'; b.innerHTML = formulaHTML(lab); b.addEventListener('click', () => pick('R', j)); rights.push(b); colR.appendChild(b); });
+        sel = { side: 'L', idx: 0 }; paint();
+        const check = el('button', 'btn primary', 'Check answer'); check.type = 'button';
+        check.addEventListener('click', () => {
+          if (finished) return;
+          if (q.match.left.some((x, i) => assign[i] == null)) { feedback.textContent = 'Match every item on the left first: click an item, then click its partner.'; feedback.className = 'q-feedback'; return; }
+          const answerIdx = it => typeof it.answer === 'number' ? it.answer : q.match.right.indexOf(it.answer);
+          let ok = true;
+          q.match.left.forEach((it, i) => { const good = assign[i] === answerIdx(it); if (!good) ok = false; lefts[i].classList.add(good ? 'right' : 'wrong'); });
+          if (ok) right(); else wrong();
+        });
+        actions.appendChild(check);
+        reveal = () => { q.match.left.forEach((it, i) => { assign[i] = typeof it.answer === 'number' ? it.answer : q.match.right.indexOf(it.answer); }); sel = null; paint(); lefts.forEach(b => { b.classList.remove('wrong'); b.classList.add('right'); }); };
+      } else if (q.typed) {
+        const fields = q.typed.fields || [q.typed];
+        const inputs = [];
+        fields.forEach((f, i) => {
+          if (f.label) { const l = el('div', 'q-field-label'); l.innerHTML = formulaHTML(f.label); card.appendChild(l); }
+          const row = el('div', 'q-typed');
+          const input = el('input', 'q-input'); input.type = 'text'; input.placeholder = f.placeholder || 'Type your answer';
+          input.autocapitalize = 'off'; input.autocomplete = 'off'; input.spellcheck = false;
+          input.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') { if (i < fields.length - 1) inputs[i + 1].focus(); else go(); } });
+          row.appendChild(input); card.appendChild(row); inputs.push(input);
+        });
+        const go = () => {
+          if (finished) return;
+          let ok = true;
+          fields.forEach((f, i) => { const good = f.check(inputs[i].value); inputs[i].classList.add(good ? 'right' : 'wrong'); if (!good) ok = false; });
+          if (ok) right(); else wrong();
+        };
+        const check = el('button', 'btn primary', 'Check'); check.type = 'button';
+        check.addEventListener('click', go);
+        actions.appendChild(check);
+        setTimeout(() => inputs[0].focus(), 50);
+        reveal = () => { const a = el('div', 'q-answer'); a.innerHTML = fields.map(f => (f.label ? formulaHTML(f.label) + ': ' : 'Answer: ') + formulaHTML(f.answer)).join('<br>'); card.insertBefore(a, feedback); };
+      }
+      card.appendChild(feedback); card.appendChild(actions);
+    }
+    render();
+  }
+
+  window.Quiz = { ask, formulaHTML, close(overlay) { overlay.innerHTML = ''; } };
+})();
+
+</script>
+<script>
+// URL parameters and a postMessage API for embedding in another site.
+//   ?topic=electrolysis&preset=brine&mode=embed&power=1&labels=name
+//   mode=embed  hides header and design panel (also the default inside an iframe)
+//   mode=full   forces the full UI even inside an iframe
+//   controls=0  hides the teaching panel too
+//   designer=1  shows the design panel in embed mode
+//   design={"colour.background":"#000"}   JSON design overrides
+//   autoplay=0  start paused
+(function () {
+  const params = new URLSearchParams(location.search);
+  const inFrame = window.self !== window.top;
+  const Embed = {
+    params,
+    get mode() { return params.get('mode') || (inFrame ? 'embed' : 'full'); },
+    get isEmbed() { return this.mode === 'embed'; },
+    flag(name, def) {
+      if (!params.has(name)) return def;
+      return ['1', 'true', 'on', 'yes'].includes(params.get(name).toLowerCase());
+    },
+    designOverrides() {
+      const raw = params.get('design'); if (!raw) return {};
+      try { return JSON.parse(raw); } catch (e) { console.warn('Bad design param', e); return {}; }
+    },
+    controlOverrides(schema) {
+      const out = {};
+      schema.forEach(item => {
+        if (!params.has(item.id)) return;
+        const raw = params.get(item.id);
+        if (item.type === 'toggle') out[item.id] = ['1', 'true', 'on', 'yes'].includes(raw.toLowerCase());
+        else if (item.type === 'range') out[item.id] = parseFloat(raw);
+        else if (item.type !== 'button') out[item.id] = raw;
+      });
+      return out;
+    },
+    listen(app) {
+      window.addEventListener('message', ev => {
+        const m = ev.data;
+        if (!m || typeof m !== 'object' || !m.cmd) return;
+        switch (m.cmd) {
+          case 'preset': app.setPreset(m.id); break;
+          case 'control': app.setControl(m.id, m.value); break;
+          case 'play': app.engine.play(); break;
+          case 'pause': app.engine.pause(); break;
+          case 'step': app.engine.step(); break;
+          case 'reset': app.reset(); break;
+          case 'speed': app.engine.setSpeed(Number(m.value) || 1); break;
+          case 'design': app.design.applyJson(m.values || {}); break;
+        }
+      });
+    },
+    notify(event, data) {
+      if (!inFrame) return;
+      try { window.parent.postMessage(Object.assign({ source: 'science-animations', event }, data || {}), '*'); } catch (e) { /* ignore */ }
+    }
+  };
+  window.Embed = Embed;
+})();
+
+</script>
+<script>
+// App shell: builds the page around a topic, wires engine, panels, embed and keyboard.
+(function () {
+  const el = Controls.el;
+
+  function start(opts) {
+    const topic = Topics.get(opts.topicId);
+    const root = opts.root;
+    root.innerHTML = '';
+    const embed = Embed.isEmbed;
+    document.body.classList.toggle('embed', embed);
+    document.title = topic.title + ' · Science Animations';
+
+    // Header
+    const header = el('header', 'app-header');
+    if (!embed && Topics.list().length > 1) {
+      const back = el('a', 'app-back', '‹ Topics'); back.href = location.pathname; header.appendChild(back);
+    }
+    header.appendChild(el('h1', 'app-title', topic.title));
+    const focusBtn = el('button', 'btn app-focus', 'Focus'); focusBtn.type = 'button';
+    if (!embed) header.appendChild(focusBtn);
+    root.appendChild(header);
+
+    // Stage
+    const stage = el('div', 'stage');
+    root.appendChild(stage);
+    const canvas = SimCanvas.create(stage, { aspect: topic.aspect || 0.64 });
+    const overlay = el('div', 'stage-overlay');
+    stage.appendChild(overlay);
+    const g = SimCanvas.G(canvas);
+
+    // Transport
+    const transport = el('div', 'transport');
+    const playBtn = el('button', 'btn primary', 'Pause'); playBtn.type = 'button';
+    const stepBtn = el('button', 'btn', 'Step'); stepBtn.type = 'button';
+    const resetBtn = el('button', 'btn', 'Reset'); resetBtn.type = 'button';
+    const speedWrap = el('label', 'speed');
+    speedWrap.appendChild(el('span', null, 'Speed'));
+    const speed = el('input'); speed.type = 'range'; speed.min = 0.25; speed.max = 3; speed.step = 0.25; speed.value = 1;
+    const speedOut = el('output', 'ctl-value', '1×');
+    speedWrap.appendChild(speed); speedWrap.appendChild(speedOut);
+    [playBtn, stepBtn, resetBtn, speedWrap].forEach(b => transport.appendChild(b));
+    root.appendChild(transport);
+
+    // Panels
+    const student = !!(window.BUILD && window.BUILD.student);   // student build: no design panel, design fixed by the baked file
+    const teachPanel = el('details', 'panel panel-teach');
+    teachPanel.appendChild(el('summary', null, student ? 'Setup controls' : 'Teaching controls'));
+    const teachBody = el('div', 'panel-body'); teachPanel.appendChild(teachBody);
+    teachPanel.open = !embed;
+    if (embed && !Embed.flag('controls', true)) teachPanel.hidden = true;
+    root.appendChild(teachPanel);
+
+    const designPanel = el('details', 'panel panel-design');
+    designPanel.appendChild(el('summary', null, 'Design (colours, sizes, text)'));
+    const designBody = el('div', 'panel-body'); designPanel.appendChild(designBody);
+    if (student || (embed && !Embed.flag('designer', false))) designPanel.hidden = true;
+    root.appendChild(designPanel);
+
+    // Design values
+    const baked = (window.TopicDesigns && window.TopicDesigns[topic.id]) || {};
+    const design = Design.create({
+      topicId: topic.id, schema: topic.designSchema || [], baked, locked: student,
+      urlOverrides: Embed.designOverrides(), container: designBody,
+      onChange: () => { if (sim && sim.onDesignChange) sim.onDesignChange(); }
+    });
+
+    // Teaching controls
+    let sim = null;
+    const controlInit = Embed.controlOverrides(topic.controls || []);
+    const presetParam = Embed.params.get('preset');
+    if (presetParam && topic.presets.some(p => p.id === presetParam)) controlInit.preset = presetParam;
+    const controls = Controls.build(teachBody, topic.controls || [], controlInit, (id, v, values, item) => {
+      if (!sim) return;
+      if (id === 'preset') sim.reset(v);
+      else if (item && item.type === 'button') sim.action(id);
+      else if (sim.onControl) sim.onControl(id, v);
+      Embed.notify('control', { id, value: v });
+    });
+
+    sim = topic.create({ g, canvas, controls, design, overlay });
+    const engine = Engine.create({ update: dt => sim.update(dt), draw: () => sim.draw() });
+    sim.reset(controls.values.preset || (topic.presets[0] && topic.presets[0].id));
+
+    function syncPlay() { playBtn.textContent = engine.playing ? 'Pause' : 'Play'; }
+    engine.onChange = syncPlay;
+    playBtn.addEventListener('click', () => { engine.toggle(); });
+    stepBtn.addEventListener('click', () => { engine.step(); });
+    function reset() {
+      if (topic.resetControls) topic.resetControls(controls);
+      sim.reset(controls.values.preset);
+    }
+    resetBtn.addEventListener('click', reset);
+    speed.addEventListener('input', () => { engine.setSpeed(parseFloat(speed.value)); speedOut.textContent = speed.value + '×'; });
+
+    // Focus mode: hide chrome, try fullscreen
+    focusBtn.addEventListener('click', () => {
+      const on = document.body.classList.toggle('focus');
+      focusBtn.textContent = on ? 'Exit focus' : 'Focus';
+      teachPanel.open = !on;
+      try {
+        if (on && root.requestFullscreen) root.requestFullscreen();
+        else if (on && root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+        else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+      } catch (e) { /* not supported */ }
+      setTimeout(canvas.resize, 50);
+    });
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && document.body.classList.contains('focus')) {
+        document.body.classList.remove('focus'); focusBtn.textContent = 'Focus'; teachPanel.open = true;
+      }
+      setTimeout(canvas.resize, 50);
+    });
+
+    // Keyboard (desktop convenience)
+    document.addEventListener('keydown', ev => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if (overlay.childElementCount) return;
+      if (ev.key === ' ') { ev.preventDefault(); engine.toggle(); }
+      else if (ev.key === 'ArrowRight') { engine.step(); }
+      else if (ev.key.toLowerCase() === 'r') { reset(); }
+      else if (ev.key.toLowerCase() === 'p' && controls.values.power !== undefined) { controls.set('power', !controls.values.power); }
+      else if (ev.key.toLowerCase() === 'n' && sim.action) { sim.action('next'); }
+      else if (ev.key.toLowerCase() === 'b' && sim.action) { sim.action('back'); }
+    });
+
+    engine.start();
+    if (Embed.flag('autoplay', true)) engine.play();
+    syncPlay();
+
+    const app = {
+      topic, engine, controls, design, sim, reset,
+      setPreset(id) { controls.set('preset', id); },
+      setControl(id, v) { controls.set(id, v); }
+    };
+    Embed.listen(app);
+    Embed.notify('ready', { topic: topic.id });
+    window.app = app;
+    return app;
+  }
+
+  function launcher(root) {
+    root.innerHTML = '';
+    const header = el('header', 'app-header');
+    header.appendChild(el('h1', 'app-title', 'Science Animations'));
+    root.appendChild(header);
+    const list = el('div', 'launcher');
+    Topics.list().forEach(t => {
+      const a = el('a', 'launch-card');
+      a.href = '?topic=' + encodeURIComponent(t.id);
+      a.appendChild(el('div', 'launch-title', t.title));
+      if (t.description) a.appendChild(el('div', 'launch-desc', t.description));
+      list.appendChild(a);
+    });
+    root.appendChild(list);
+  }
+
+  function registerSW() {
+    if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+    navigator.serviceWorker.register('sw.js').catch(() => { /* optional */ });
+  }
+
+  function boot(root) {
+    const list = Topics.list();
+    const id = Embed.params.get('topic') || window.DEFAULT_TOPIC || (list.length === 1 ? list[0].id : null);
+    if (id && Topics.get(id)) start({ topicId: id, root });
+    else launcher(root);
+    registerSW();
+  }
+
+  window.App = { start, launcher, boot };
+})();
+
+</script>
+<script>
 // Electrolysis (GCSE). Presets are data; a small rules engine decides the products.
 (function () {
   'use strict';
@@ -1196,3 +2332,86 @@
     resetControls(ctl) { ctl.set('power', false, true); }
   });
 })();
+
+</script>
+<script>
+// Design for topic "electrolysis". Drop this file into topics/ as electrolysis.design.js
+window.TopicDesigns = window.TopicDesigns || {};
+window.TopicDesigns["electrolysis"] = {
+  "colour.background": "#ffffff",
+  "colour.liquidMolten": "#fef3c7",
+  "colour.liquidAqueous": "#0056d6",
+  "colour.usePresetLiquid": true,
+  "colour.glass": "#94a3b8",
+  "colour.graphite": "#334155",
+  "colour.copper": "#c2410c",
+  "colour.wire": "#475569",
+  "colour.electron": "#eab308",
+  "colour.text": "#0f172a",
+  "colour.water": "#60a5fa",
+  "ion.radius": 15,
+  "ion.outline": false,
+  "ion.nameSize": 0.7,
+  "ion.Pb2+.colour": "#64748b",
+  "ion.Pb2+.radius": 1,
+  "product.Pb2+.colour": "#9ca3af",
+  "ion.Na+.colour": "#7c3aed",
+  "ion.Na+.radius": 1,
+  "product.Na+.colour": "#c4b5fd",
+  "ion.Al3+.colour": "#0284c7",
+  "ion.Al3+.radius": 1,
+  "product.Al3+.colour": "#bae6fd",
+  "ion.Cu2+.colour": "#2563eb",
+  "ion.Cu2+.radius": 1,
+  "product.Cu2+.colour": "#ea580c",
+  "ion.H+.colour": "#e11d48",
+  "ion.H+.radius": 1,
+  "product.H+.colour": "#fecdd3",
+  "ion.Br-.colour": "#ea580c",
+  "ion.Br-.radius": 1,
+  "product.Br-.colour": "#b45309",
+  "ion.Cl-.colour": "#16a34a",
+  "ion.Cl-.radius": 1,
+  "product.Cl-.colour": "#bbf7d0",
+  "ion.O2-.colour": "#dc2626",
+  "ion.O2-.radius": 1,
+  "product.O2-.colour": "#fecaca",
+  "ion.OH-.colour": "#0d9488",
+  "ion.OH-.radius": 1,
+  "product.OH-.colour": "#ccfbf1",
+  "ion.SO42-.colour": "#a16207",
+  "ion.SO42-.radius": 1,
+  "motion.count": 30,
+  "motion.jitter": 0,
+  "motion.drift": 1,
+  "motion.discharge": 2,
+  "motion.bubbleSpeed": 1,
+  "motion.bubbleSize": 1.3,
+  "motion.electronSpeed": 2.3,
+  "motion.electronSize": 2,
+  "motion.water": 10,
+  "text.font": "system-ui",
+  "text.size": 15,
+  "text.equationSize": 19,
+  "text.electrodeNames": "symbols",
+  "text.flowText": "full",
+  "text.flowSize": 13,
+  "text.showTitle": true,
+  "text.showNote": true,
+  "text.showCounters": true,
+  "text.showProductLabels": true,
+  "text.showElectrodeLabels": true,
+  "layout.cathodeSide": "left",
+  "layout.electrodeWidth": 0.04,
+  "layout.beakerWidth": 0.72,
+  "layout.beakerWidthSteps": 0.5,
+  "layout.glow": false,
+  "layout.showSupply": true
+};
+
+</script>
+<script>window.DEFAULT_TOPIC = 'electrolysis';</script>
+<script>window.BUILD = { student: true };</script>
+<script>App.boot(document.getElementById('app'));</script>
+</body>
+</html>

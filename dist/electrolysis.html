@@ -48,6 +48,7 @@ html, body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 20px;
 }
 .ctl-group > legend { font-weight: 700; color: var(--muted); font-size: .85rem; padding: 0 6px; }
+[hidden] { display: none !important; }
 .ctl-row { min-width: 0; display: flex; flex-direction: column; gap: 4px; min-height: 44px; justify-content: center; }
 .ctl-row.ctl-inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
 .ctl-label { font-weight: 600; }
@@ -606,8 +607,9 @@ body.focus .focus-exit { display: inline-block; }
 
   function create(o) {
     const base = Object.assign({}, defaults(o.schema), o.baked || {});
-    const stored = load(o.topicId) || {};
-    const init = Object.assign({}, base, stored, o.urlOverrides || {});
+    // locked (student build): the baked design is final; ignore saved and URL overrides
+    const stored = o.locked ? {} : (load(o.topicId) || {});
+    const init = Object.assign({}, base, stored, o.locked ? {} : (o.urlOverrides || {}));
 
     const tools = el('div', 'design-tools');
     o.container.appendChild(tools);
@@ -1002,8 +1004,9 @@ body.focus .focus-exit { display: inline-block; }
     root.appendChild(transport);
 
     // Panels
+    const student = !!(window.BUILD && window.BUILD.student);   // student build: no design panel, design fixed by the baked file
     const teachPanel = el('details', 'panel panel-teach');
-    teachPanel.appendChild(el('summary', null, 'Teaching controls'));
+    teachPanel.appendChild(el('summary', null, student ? 'Setup controls' : 'Teaching controls'));
     const teachBody = el('div', 'panel-body'); teachPanel.appendChild(teachBody);
     teachPanel.open = !embed;
     if (embed && !Embed.flag('controls', true)) teachPanel.hidden = true;
@@ -1012,13 +1015,13 @@ body.focus .focus-exit { display: inline-block; }
     const designPanel = el('details', 'panel panel-design');
     designPanel.appendChild(el('summary', null, 'Design (colours, sizes, text)'));
     const designBody = el('div', 'panel-body'); designPanel.appendChild(designBody);
-    if (embed && !Embed.flag('designer', false)) designPanel.hidden = true;
+    if (student || (embed && !Embed.flag('designer', false))) designPanel.hidden = true;
     root.appendChild(designPanel);
 
     // Design values
     const baked = (window.TopicDesigns && window.TopicDesigns[topic.id]) || {};
     const design = Design.create({
-      topicId: topic.id, schema: topic.designSchema || [], baked,
+      topicId: topic.id, schema: topic.designSchema || [], baked, locked: student,
       urlOverrides: Embed.designOverrides(), container: designBody,
       onChange: () => { if (sim && sim.onDesignChange) sim.onDesignChange(); }
     });
@@ -1278,7 +1281,7 @@ body.focus .focus-exit { display: inline-block; }
     { id: 'preset', type: 'select', label: 'Electrolyte', options: PRESETS.map(p => ({ value: p.id, label: p.title })), default: 'molten-pbbr2' },
     { id: 'guide', type: 'segmented', label: 'Mode', options: [{ value: 'steps', label: 'Step by step' }, { value: 'study', label: 'Study (questions)' }, { value: 'free', label: 'Free running' }], default: 'steps' },
     { id: 'difficulty', type: 'segmented', label: 'Question difficulty', options: [{ value: 'easy', label: 'Easy' }, { value: 'medium', label: 'Medium' }, { value: 'hard', label: 'Hard (type answers)' }], default: 'easy', showIf: v => v.guide === 'study' },
-    { id: 'electrodes', type: 'segmented', label: 'Electrodes', options: [{ value: 'one', label: 'One at a time' }, { value: 'both', label: 'Both together' }], default: 'one', showIf: v => v.guide !== 'free' },
+    { id: 'electrodes', type: 'segmented', label: 'Electrodes', options: [{ value: 'cathode', label: 'Cathode only' }, { value: 'anode', label: 'Anode only' }, { value: 'both', label: 'Both' }], default: 'both', showIf: v => v.guide !== 'free' },
     { id: 'next', type: 'button', label: 'Next step ›', primary: true, showIf: v => v.guide !== 'free' },
     { id: 'back', type: 'button', label: '‹ Back', showIf: v => v.guide !== 'free' },
     { id: 'power', type: 'toggle', label: 'Power on', default: false, showIf: v => v.guide === 'free' },
@@ -1290,12 +1293,12 @@ body.focus .focus-exit { display: inline-block; }
     { id: 'predict', type: 'toggle', label: 'Predict the products (hide until revealed)', default: false, showIf: v => v.guide === 'free' },
     { id: 'reveal', type: 'button', label: 'Reveal products', primary: true, showIf: v => v.guide === 'free' && v.predict }
   ];
-  // Show/hide each kind of ion (e.g. record the cathode with only Cu2+ and H+ visible). Hidden ions still
-  // take part in the simulation; they and their bubbles are just not drawn.
-  Object.keys(SPECIES).forEach((k, i) => controls.splice(controls.findIndex(x => x.id === 'labels') + 1 + i, 0, {
-    id: 'show.' + k, type: 'toggle', label: 'Show ' + SPECIES[k].name + 's', default: true,
-    showIf: v => { const pr = PRESET_BY_ID[v.preset]; return !!pr && (!!pr.ions[k] || (pr.state === 'aqueous' && (k === 'H+' || k === 'OH-'))); }
-  }));
+  // Show only the cations or only the anions (so the class can watch positive ions go to the cathode and negative
+  // ions to the anode separately). Hidden ions still take part in the simulation; they and their bubbles are not drawn.
+  controls.splice(controls.findIndex(x => x.id === 'labels') + 1, 0, {
+    id: 'ions', type: 'segmented', label: 'Ions shown', options: [{ value: 'cations', label: 'Cations (+) only' }, { value: 'anions', label: 'Anions (−) only' }, { value: 'both', label: 'Both' }], default: 'both'
+  });
+  const ionShown = (c, k) => c.ions === 'both' || !c.ions || (c.ions === 'cations') === (SPECIES[k].charge > 0);
 
   // ---------------------------------------------------------------- simulation
   function create(ctx) {
@@ -1308,6 +1311,9 @@ body.focus .focus-exit { display: inline-block; }
     const isStudy = () => C().guide === 'study';
     let asked = {}, score = { right: 0, total: 0 };
     const flags = () => (isStory() && steps[storyStep]) ? steps[storyStep].flags : null;
+    // Step/study mode can show one half of the cell: the other electrode, its wire, products, flow column and questions are dropped.
+    const shownSide = () => { const e = C().electrodes; return isStory() && (e === 'cathode' || e === 'anode') ? e : null; };
+    const showE = name => { const ss = shownSide(); return !ss || ss === name; };
 
     const C = () => ctx.controls.values;
     const D = () => ctx.design.values;
@@ -1441,7 +1447,7 @@ body.focus .focus-exit { display: inline-block; }
 
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
     function buildStory() {
-      const both = C().electrodes === 'both';
+      const side = shownSide(), both = !side;
       const cat = SPECIES[R.cathode], an = R.anode ? SPECIES[R.anode] : null;
       const keys = Object.keys(preset.ions);
       const cats = keys.filter(k => SPECIES[k].charge > 0), ans = keys.filter(k => SPECIES[k].charge < 0);
@@ -1493,7 +1499,7 @@ body.focus .focus-exit { display: inline-block; }
       const pairs = [
         { key: 'push',
           a: [cathode.push[0], { power: true, eCath: true }, 'negTerminal', { cathode: cathode.push[1] }],
-          b: [anode.push[0], { eAn: true }, 'posTerminal', { anode: anode.push[1] }],
+          b: [anode.push[0], { power: true, eAn: true }, 'posTerminal', { anode: anode.push[1] }],
           both: ['Switch on. Electrons are pushed from the negative terminal towards the ' + catDir + ' electrode, and pulled out of the ' + anDir + ' electrode into the positive terminal.', { power: true, eCath: true, eAn: true }, 'terminals', { cathode: cathode.push[1], anode: anode.push[1] }] },
         { key: 'charged',
           a: [cathode.charged[0], { cathodeCharged: true }, 'cathode', { cathode: cathode.charged[1] }],
@@ -1523,13 +1529,12 @@ body.focus .focus-exit { display: inline-block; }
       let num = 0;
       pairs.forEach(pr => {
         if (both) { if (!pr.both) return; num++; add(pr.both[0], pr.both[1], pr.both[2], pr.both[3], pr.key); S[S.length - 1].num = num; return; }
-        if (!pr.a && !pr.b) return;
+        const st = side === 'cathode' ? pr.a : pr.b;
+        if (!st) return;
         num++;
-        const single = !(pr.a && pr.b);
-        if (pr.a) { add(pr.a[0], pr.a[1], pr.a[2], pr.a[3], pr.key); Object.assign(S[S.length - 1], { num, sub: single ? null : 'a' }); }
-        if (pr.b) { add(pr.b[0], pr.b[1], pr.b[2], pr.b[3], pr.key); Object.assign(S[S.length - 1], { num, sub: single ? null : 'b' }); }
+        add(st[0], st[1], st[2], st[3], pr.key); S[S.length - 1].num = num;
       });
-      add('The circuit is complete: electrons flow all the way round. Ions keep moving and products keep forming while the power is on.', { free: true }, null, null, 'finish');
+      add(side ? 'That is the ' + side + ' half of the cell. Choose the other electrode, or Both, to see the rest of the circuit.' : 'The circuit is complete: electrons flow all the way round. Ions keep moving and products keep forming while the power is on.', { free: !side }, null, null, 'finish');
       return S;
     }
     function L0() { const d = D(); return { cathode: { side: d['layout.cathodeSide'] === 'right' ? 1 : -1 } }; }
@@ -1568,11 +1573,27 @@ body.focus .focus-exit { display: inline-block; }
     const POOL_PRODUCTS = ['lead', 'bromine', 'sodium', 'chlorine', 'aluminium', 'oxygen', 'hydrogen', 'copper'];
 
     function questionsFor(i) {
-      const st = steps[i]; if (!st || !st.key || st.sub === 'b') return [];
+      const st = steps[i]; if (!st || !st.key) return [];
       const hasCompete = steps.some(x => x.key === 'compete');
       const keys = { intro: ['intro'], push: ['push'], charged: ['charged'], move: ['move'],
         compete: ['discharge'], discharge: hasCompete ? ['product'] : ['discharge', 'product'], product: [], observe: ['observe'] }[st.key] || [];
-      return keys.map(buildQuestion).filter(Boolean);
+      return keys.map(buildQuestion).map(sideOnly).filter(Boolean);
+    }
+    // In cathode-only / anode-only mode drop the parts of a question about the hidden electrode.
+    function sideOnly(q) {
+      const side = shownSide(); if (!q || !side) return q;
+      const sideOf = t => /cathode|negativ/i.test(t) ? 'cathode' : /anode|positiv/i.test(t) ? 'anode' : null;
+      const keep = (label, answer) => (sideOf(String(label || '')) || sideOf(String(answer || '')) || side) === side;
+      q = Object.assign({}, q);
+      if (q.prompt) q.prompt = q.prompt.replace(/each electrode/g, 'the ' + side);
+      if (q.match) { q.match = Object.assign({}, q.match, { left: q.match.left.filter(it => keep(it.label, it.answer)) }); if (!q.match.left.length) return null; }
+      if (q.typed && q.typed.fields) { q.typed = { fields: q.typed.fields.filter(fd => keep(fd.label, fd.answer)) }; if (!q.typed.fields.length) return null; }
+      if (q.gaps) {
+        const idx = q.gaps.answers.map((a, i) => keep(a.join(' ')) ? i : -1).filter(i => i >= 0);
+        if (!idx.length) return null;
+        q.gaps = Object.assign({}, q.gaps, { sentences: idx.map(i => q.gaps.sentences[i]), answers: idx.map(i => q.gaps.answers[i]) });
+      }
+      return q;
     }
     function questionFor(i) { return questionsFor(i)[0] || null; }
     function buildQuestion(key) {
@@ -1742,7 +1763,7 @@ body.focus .focus-exit { display: inline-block; }
             const spectator = !(p.k === R.cathode || p.k === R.anode);
             p.vx += Math.sign(target.cx - x) * drift * (spectator ? 0.6 : 1) * dt;
             const other = target === L.cathode ? L.anode : L.cathode;
-            const between = (other.cx - x) * (target.cx - x) < 0;   // other electrode lies in the way
+            const between = showE(other.name) && (other.cx - x) * (target.cx - x) < 0;   // other electrode lies in the way
             if (between && Math.abs(other.cx - x) < other.w / 2 + r * 3 && y < other.y + other.h + r * 1.5) p.vy += drift * 1.2 * dt;
             // parked underneath the target electrode: rise up to its face so it can be discharged
             const underTarget = y > target.y + target.h - r && Math.abs(target.cx - x) < target.w / 2 + r * 2.5;
@@ -1751,6 +1772,7 @@ body.focus .focus-exit { display: inline-block; }
           P.clampSpeed(p, maxV);
           x += p.vx * dt; y += p.vy * dt;
           for (const E of [L.cathode, L.anode]) {
+            if (!showE(E.name)) continue;
             const inY = y > E.y - r && y < E.y + E.h + r;
             if (inY && x > E.x - r && x < E.x + E.w + r) {
               const isTarget = E === target;
@@ -1902,15 +1924,15 @@ body.focus .focus-exit { display: inline-block; }
 
       if (aqueous && c.water) drawWater(L, d, c);
 
-      drawElectrode(L.cathode, L, d, hidden);
-      drawElectrode(L.anode, L, d, hidden);
+      if (showE('cathode')) drawElectrode(L.cathode, L, d, hidden);
+      if (showE('anode')) drawElectrode(L.anode, L, d, hidden);
 
-      ions.forEach(p => { if (c['show.' + p.k] !== false) drawIon(p, L, d, c); });
-      bubbles.forEach(b => { if (c['show.' + b.k] !== false) drawBubble(b, L, d, c, hidden); });
+      ions.forEach(p => { if (ionShown(c, p.k)) drawIon(p, L, d, c); });
+      bubbles.forEach(b => { if (ionShown(c, b.k) && showE(b.E)) drawBubble(b, L, d, c, hidden); });
       flashes.forEach(f => g.alpha(1 - f.t * 2, () => g.circle(f.x, f.y, 6 * s + f.t * 20 * s, null, d['colour.electron'], 2 * s)));
 
-      ['cathode', 'anode'].forEach(E => drawProducts(E, L, d, hidden));
-      if (d['text.showElectrodeLabels']) { drawElectrodeLabel(L.cathode, L, d); drawElectrodeLabel(L.anode, L, d); }
+      ['cathode', 'anode'].forEach(E => { if (showE(E)) drawProducts(E, L, d, hidden); });
+      if (d['text.showElectrodeLabels']) ['cathode', 'anode'].forEach(E => { if (showE(E)) drawElectrodeLabel(L[E], L, d); });
       if (f) {
         if (f.observeC) drawObservation(L.cathode, OBS[SPECIES[R.cathode].product.formula], L, d);
         if (f.observeA) drawObservation(L.anode, R.anodeDissolves ? OBS.dissolve : OBS[SPECIES[R.anode].product.formula], L, d);
@@ -1991,8 +2013,8 @@ body.focus .focus-exit { display: inline-block; }
       const posX = L.anode.side < 0 ? S.x : S.x + S.w;
       const cathPath = [[negX, midY], [L.cathode.cx, midY], [L.cathode.cx, L.cathode.y]];
       const anPath = [[L.anode.cx, L.anode.y], [L.anode.cx, midY], [posX, midY]];
-      g.path(cathPath, wire, lw);
-      g.path(anPath, wire, lw);
+      if (showE('cathode')) g.path(cathPath, wire, lw);
+      if (showE('anode')) g.path(anPath, wire, lw);
       // supply box
       g.roundRect(S.x, S.y, S.w, S.h, 6 * s, '#f1f5f9', wire, lw * 0.7);
       const ts = d['text.size'] * s, font = d['text.font'];
@@ -2002,8 +2024,8 @@ body.focus .focus-exit { display: inline-block; }
       g.text(px2, S.y + S.h / 2, '+', { font, size: ts * 1.4, color: d['colour.text'], align: 'center', weight: '700' });
 
       const f = flags();
-      if (f ? f.eCath : (c.power && c.electrons)) drawElectrons(cathPath, L, d, false);
-      if (f ? f.eAn : (c.power && c.electrons)) drawElectrons(anPath, L, d, true);
+      if (showE('cathode') && (f ? f.eCath : (c.power && c.electrons))) drawElectrons(cathPath, L, d, false);
+      if (showE('anode') && (f ? f.eAn : (c.power && c.electrons))) drawElectrons(anPath, L, d, true);
     }
 
     function terminalPos(L, neg) {
@@ -2032,6 +2054,7 @@ body.focus .focus-exit { display: inline-block; }
       if (kind === 'ions' || kind === 'cations' || kind === 'anions') {
         ions.forEach(p => {
           if (kind !== 'ions' && (kind === 'cations') !== (p.sp.charge > 0)) return;
+          if (!ionShown(C(), p.k)) return;
           const [x, y] = px(p, L); ring(x, y, ionR(p) + 5 * s);
         });
       } else if (kind === 'cathode' || kind === 'anode') {
@@ -2074,6 +2097,7 @@ body.focus .focus-exit { display: inline-block; }
       const s = L.s, font = d['text.font'], text = d['colour.text'];
       const useFull = d['text.flowText'] === 'full';
       ['cathode', 'anode'].forEach(side => {
+        if (!showE(side)) return;
         const col = L.flow[side];
         const items = [];
         for (let i = 0; i < storyStep; i++) {
@@ -2311,10 +2335,79 @@ body.focus .focus-exit { display: inline-block; }
 
 </script>
 <script>
-// Baked design overrides for the electrolysis topic.
-// Export a design from the Design panel and replace this file with the download.
+// Design for topic "electrolysis". Drop this file into topics/ as electrolysis.design.js
 window.TopicDesigns = window.TopicDesigns || {};
-window.TopicDesigns["electrolysis"] = {};
+window.TopicDesigns["electrolysis"] = {
+  "colour.background": "#ffffff",
+  "colour.liquidMolten": "#fef3c7",
+  "colour.liquidAqueous": "#0056d6",
+  "colour.usePresetLiquid": true,
+  "colour.glass": "#94a3b8",
+  "colour.graphite": "#334155",
+  "colour.copper": "#c2410c",
+  "colour.wire": "#475569",
+  "colour.electron": "#eab308",
+  "colour.text": "#0f172a",
+  "colour.water": "#60a5fa",
+  "ion.radius": 15,
+  "ion.outline": false,
+  "ion.nameSize": 0.7,
+  "ion.Pb2+.colour": "#64748b",
+  "ion.Pb2+.radius": 1,
+  "product.Pb2+.colour": "#9ca3af",
+  "ion.Na+.colour": "#7c3aed",
+  "ion.Na+.radius": 1,
+  "product.Na+.colour": "#c4b5fd",
+  "ion.Al3+.colour": "#0284c7",
+  "ion.Al3+.radius": 1,
+  "product.Al3+.colour": "#bae6fd",
+  "ion.Cu2+.colour": "#2563eb",
+  "ion.Cu2+.radius": 1,
+  "product.Cu2+.colour": "#ea580c",
+  "ion.H+.colour": "#e11d48",
+  "ion.H+.radius": 1,
+  "product.H+.colour": "#fecdd3",
+  "ion.Br-.colour": "#ea580c",
+  "ion.Br-.radius": 1,
+  "product.Br-.colour": "#b45309",
+  "ion.Cl-.colour": "#16a34a",
+  "ion.Cl-.radius": 1,
+  "product.Cl-.colour": "#bbf7d0",
+  "ion.O2-.colour": "#dc2626",
+  "ion.O2-.radius": 1,
+  "product.O2-.colour": "#fecaca",
+  "ion.OH-.colour": "#0d9488",
+  "ion.OH-.radius": 1,
+  "product.OH-.colour": "#ccfbf1",
+  "ion.SO42-.colour": "#a16207",
+  "ion.SO42-.radius": 1,
+  "motion.count": 30,
+  "motion.jitter": 0,
+  "motion.drift": 1,
+  "motion.discharge": 2,
+  "motion.bubbleSpeed": 1,
+  "motion.bubbleSize": 1.3,
+  "motion.electronSpeed": 2.3,
+  "motion.electronSize": 2,
+  "motion.water": 10,
+  "text.font": "system-ui",
+  "text.size": 15,
+  "text.equationSize": 19,
+  "text.electrodeNames": "symbols",
+  "text.flowText": "full",
+  "text.flowSize": 13,
+  "text.showTitle": true,
+  "text.showNote": true,
+  "text.showCounters": true,
+  "text.showProductLabels": true,
+  "text.showElectrodeLabels": true,
+  "layout.cathodeSide": "left",
+  "layout.electrodeWidth": 0.04,
+  "layout.beakerWidth": 0.72,
+  "layout.beakerWidthSteps": 0.5,
+  "layout.glow": false,
+  "layout.showSupply": true
+};
 
 </script>
 <script>window.DEFAULT_TOPIC = 'electrolysis';</script>

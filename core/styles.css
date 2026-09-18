@@ -39,6 +39,7 @@ html, body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 20px;
 }
 .ctl-group > legend { font-weight: 700; color: var(--muted); font-size: .85rem; padding: 0 6px; }
+[hidden] { display: none !important; }
 .ctl-row { min-width: 0; display: flex; flex-direction: column; gap: 4px; min-height: 44px; justify-content: center; }
 .ctl-row.ctl-inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
 .ctl-label { font-weight: 600; }

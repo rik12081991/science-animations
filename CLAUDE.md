@@ -1,7 +1,7 @@
 # Science_animations
 
 GCSE classroom animations. Vanilla JS + Canvas, no dependencies, offline on iPad Safari, iframe-embeddable.
-Topics: `topics/electrolysis.js`, `topics/fuel-cell.js` (added 2026-09-17). Framework in `core/`. `python3 build.py` -> `dist/<topic>.html`.
+Topics: `topics/electrolysis.js`, `topics/fuel-cell.js` (added 2026-09-17). Framework in `core/`. `python3 build.py` -> `dist/<topic>.html` (teacher) + `dist/<topic>-student.html` (2026-09-18: `window.BUILD={student:true}`, Design panel hidden, design locked to `topics/<topic>.design.js`, panel titled Setup controls).
 Docs: `docs/EMBED.md`, `docs/NEW-TOPIC.md`, `README.md` (modes and keys). Git repo, remote github.com/rik12081991/science-animations; GitHub Pages serves the main branch root (index.html + core/ + topics/, offline via sw.js).
 
 ## Token rules (the last session cost 5x what it needed)
@@ -15,8 +15,9 @@ Docs: `docs/EMBED.md`, `docs/NEW-TOPIC.md`, `README.md` (modes and keys). Git re
 
 ## Current state (2026-09-15)
 
-Three modes in Teaching controls: Step by step (default, empty electrolyte, Next reveals ions lined up centrally, numbered steps, 1a/1b sub-steps when Electrodes = One at a time, flow diagram columns, final observations step); Study (question before each step, Easy/Medium/Hard, single/multi/match/gap/typed, Try again then Show answer after 2 misses); Free running (many ions, power, replenish, predict quiz).
+Three modes in Teaching controls: Step by step (default, empty electrolyte, Next reveals ions lined up centrally, numbered steps, Electrodes = Cathode only / Anode only / Both (2026-09-18; single side hides the other electrode, wire, flow column and question parts via `shownSide()`/`showE()`/`sideOnly()`), flow diagram columns, final observations step); Study (question before each step, Easy/Medium/Hard, single/multi/match/gap/typed, Try again then Show answer after 2 misses); Free running (many ions, power, replenish, predict quiz).
 Eight presets via a rules engine: molten PbBr2, NaCl, Al2O3; concentrated NaCl (brine); dilute NaCl (OH- beats Cl- at the anode, `dilute: true`); CuSO4 inert and copper; dilute H2SO4.
+Teaching control `ions` (cations / anions / both, 2026-09-18) hides one sign of ion so pupils see + to cathode, − to anode separately. `[hidden]{display:none!important}` in styles.css is what makes control-row `showIf` work.
 Design panel (~65 controls) exports to `topics/electrolysis.design.js`.
 Fuel cell topic: same three modes, presets `acid` (H+ crosses, water at cathode) and `alkaline` (OH- crosses, water at anode). Discrete electron accounting: `stored.anode` -> `transit` along the wire (only when the circuit is closed) -> `stored.cathode`; a cathode reaction needs 4 stored. Acid story has 11 steps, alkaline 11 (ions step comes after reduce). Typed equation answers are compared as sorted term sets via `eqKey`.
 Replenish is deferred (2026-09-15): discharged electrolyte ions are "owed" and return as a batch only once that species is nearly used up, so the class sees ions turn into atoms before new ones appear. Water-derived H+/OH- return at once. Debug getters on the sim: `stuck`, `speciesCounts`.

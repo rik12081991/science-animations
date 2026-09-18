@@ -48,6 +48,7 @@ html, body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 20px;
 }
 .ctl-group > legend { font-weight: 700; color: var(--muted); font-size: .85rem; padding: 0 6px; }
+[hidden] { display: none !important; }
 .ctl-row { min-width: 0; display: flex; flex-direction: column; gap: 4px; min-height: 44px; justify-content: center; }
 .ctl-row.ctl-inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
 .ctl-label { font-weight: 600; }
@@ -606,8 +607,9 @@ body.focus .focus-exit { display: inline-block; }
 
   function create(o) {
     const base = Object.assign({}, defaults(o.schema), o.baked || {});
-    const stored = load(o.topicId) || {};
-    const init = Object.assign({}, base, stored, o.urlOverrides || {});
+    // locked (student build): the baked design is final; ignore saved and URL overrides
+    const stored = o.locked ? {} : (load(o.topicId) || {});
+    const init = Object.assign({}, base, stored, o.locked ? {} : (o.urlOverrides || {}));
 
     const tools = el('div', 'design-tools');
     o.container.appendChild(tools);
@@ -1002,8 +1004,9 @@ body.focus .focus-exit { display: inline-block; }
     root.appendChild(transport);
 
     // Panels
+    const student = !!(window.BUILD && window.BUILD.student);   // student build: no design panel, design fixed by the baked file
     const teachPanel = el('details', 'panel panel-teach');
-    teachPanel.appendChild(el('summary', null, 'Teaching controls'));
+    teachPanel.appendChild(el('summary', null, student ? 'Setup controls' : 'Teaching controls'));
     const teachBody = el('div', 'panel-body'); teachPanel.appendChild(teachBody);
     teachPanel.open = !embed;
     if (embed && !Embed.flag('controls', true)) teachPanel.hidden = true;
@@ -1012,13 +1015,13 @@ body.focus .focus-exit { display: inline-block; }
     const designPanel = el('details', 'panel panel-design');
     designPanel.appendChild(el('summary', null, 'Design (colours, sizes, text)'));
     const designBody = el('div', 'panel-body'); designPanel.appendChild(designBody);
-    if (embed && !Embed.flag('designer', false)) designPanel.hidden = true;
+    if (student || (embed && !Embed.flag('designer', false))) designPanel.hidden = true;
     root.appendChild(designPanel);
 
     // Design values
     const baked = (window.TopicDesigns && window.TopicDesigns[topic.id]) || {};
     const design = Design.create({
-      topicId: topic.id, schema: topic.designSchema || [], baked,
+      topicId: topic.id, schema: topic.designSchema || [], baked, locked: student,
       urlOverrides: Embed.designOverrides(), container: designBody,
       onChange: () => { if (sim && sim.onDesignChange) sim.onDesignChange(); }
     });
@@ -1538,8 +1541,10 @@ body.focus .focus-exit { display: inline-block; }
       // equations (free mode) and story chrome
       if (!story && c.equations !== 'off') {
         const es = d['text.equationSize'] * s, ey = g.h * 0.9;
-        if (c.equations === 'always' || shownEq.anode) g.formula(L.anode.cx, ey, preset.anodeEq, { font, size: es, color: text, align: 'center', weight: '600' });
-        if (c.equations === 'always' || shownEq.cathode) g.formula(L.cathode.cx, ey, preset.cathodeEq, { font, size: es, color: text, align: 'center', weight: '600' });
+        // one equation per half of the canvas, labelled, shrunk to fit, so the two never run into each other
+        const half = g.w * 0.46, o = { font, size: es, color: text, align: 'center', weight: '600' };
+        if (c.equations === 'always' || shownEq.anode) g.formulaFit(g.w * 0.26, ey, 'Anode:  ' + preset.anodeEq, o, half);
+        if (c.equations === 'always' || shownEq.cathode) g.formulaFit(g.w * 0.74, ey, 'Cathode:  ' + preset.cathodeEq, o, half);
       }
       if (story) { if (d['layout.showFlow']) drawFlow(L, d); drawStory(L, d); }
     }

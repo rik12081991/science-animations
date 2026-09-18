@@ -3,3 +3,5 @@
 - [CuSO4 inert free-run baseline](baseline_cuso4_inert_free.md) — 5s: ~4 Cu2+/thick cathode coating; 8s: ~7 Cu2+, clustered at cathode not spread
 - [CuSO4 inert steps baseline](baseline_cuso4_inert_steps.md) — step 5a discharge: no yellow e- transit dots ever render, at any --last value tried
 - [Fuel-cell baseline](baseline_fuel_cell.md) — acid step6 cathode/electrode-label layout, alkaline step2 anode look, free-run bulb/switch/counters
+- [Molten PbBr2 free-run baseline](baseline_molten_pbbr2_free.md) — "Ions shown" segmented control (Cations/Anions/Both), no per-ion toggles, Next/Back hidden in free mode
+- [Taller-screenshot workaround](reference_taller_screenshot_workaround.md) — verify.py --shot only captures 760px viewport; use direct Chrome call for below-the-fold panels

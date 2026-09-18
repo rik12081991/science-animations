@@ -18,8 +18,9 @@
 
   function create(o) {
     const base = Object.assign({}, defaults(o.schema), o.baked || {});
-    const stored = load(o.topicId) || {};
-    const init = Object.assign({}, base, stored, o.urlOverrides || {});
+    // locked (student build): the baked design is final; ignore saved and URL overrides
+    const stored = o.locked ? {} : (load(o.topicId) || {});
+    const init = Object.assign({}, base, stored, o.locked ? {} : (o.urlOverrides || {}));
 
     const tools = el('div', 'design-tools');
     o.container.appendChild(tools);

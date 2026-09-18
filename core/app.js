@@ -42,8 +42,9 @@
     root.appendChild(transport);
 
     // Panels
+    const student = !!(window.BUILD && window.BUILD.student);   // student build: no design panel, design fixed by the baked file
     const teachPanel = el('details', 'panel panel-teach');
-    teachPanel.appendChild(el('summary', null, 'Teaching controls'));
+    teachPanel.appendChild(el('summary', null, student ? 'Setup controls' : 'Teaching controls'));
     const teachBody = el('div', 'panel-body'); teachPanel.appendChild(teachBody);
     teachPanel.open = !embed;
     if (embed && !Embed.flag('controls', true)) teachPanel.hidden = true;
@@ -52,13 +53,13 @@
     const designPanel = el('details', 'panel panel-design');
     designPanel.appendChild(el('summary', null, 'Design (colours, sizes, text)'));
     const designBody = el('div', 'panel-body'); designPanel.appendChild(designBody);
-    if (embed && !Embed.flag('designer', false)) designPanel.hidden = true;
+    if (student || (embed && !Embed.flag('designer', false))) designPanel.hidden = true;
     root.appendChild(designPanel);
 
     // Design values
     const baked = (window.TopicDesigns && window.TopicDesigns[topic.id]) || {};
     const design = Design.create({
-      topicId: topic.id, schema: topic.designSchema || [], baked,
+      topicId: topic.id, schema: topic.designSchema || [], baked, locked: student,
       urlOverrides: Embed.designOverrides(), container: designBody,
       onChange: () => { if (sim && sim.onDesignChange) sim.onDesignChange(); }
     });

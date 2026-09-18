@@ -45,7 +45,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--topic', default='electrolysis')
     ap.add_argument('--preset'); ap.add_argument('--guide', choices=['steps', 'study', 'free'])
-    ap.add_argument('--difficulty', choices=['easy', 'medium', 'hard']); ap.add_argument('--electrodes', choices=['one', 'both'])
+    ap.add_argument('--difficulty', choices=['easy', 'medium', 'hard']); ap.add_argument('--electrodes', choices=['cathode', 'anode', 'both'])
     ap.add_argument('--steps', type=int); ap.add_argument('--sim', default='1'); ap.add_argument('--last', help='sim seconds for the final step only'); ap.add_argument('--check', action='store_true')
     ap.add_argument('--open', type=int); ap.add_argument('--all', action='store_true')
     ap.add_argument('--param', action='append', default=[], help='extra URL param k=v, e.g. replenish=0')
@@ -55,7 +55,7 @@ def main():
     scenarios = []
     if a.all:
         for p in PRESETS[a.topic]:
-            for e in ['one', 'both']:
+            for e in ['cathode', 'anode', 'both']:
                 scenarios.append({'preset': p, 'guide': 'steps', 'electrodes': e, 'steps': 12, 'sim': 1})
                 for d in ['easy', 'medium', 'hard']:
                     scenarios.append({'preset': p, 'guide': 'study', 'electrodes': e, 'difficulty': d, 'check': 1})
