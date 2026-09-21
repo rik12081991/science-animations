@@ -44,7 +44,8 @@
     // Panels
     const student = !!(window.BUILD && window.BUILD.student);   // student build: no design panel, design fixed by the baked file
     const teachPanel = el('details', 'panel panel-teach');
-    teachPanel.appendChild(el('summary', null, student ? 'Setup controls' : 'Teaching controls'));
+    const summary = el('summary', null, student ? 'Setup controls' : 'Teaching controls'); teachPanel.appendChild(summary);
+    if (window.BUILD && window.BUILD.version) summary.appendChild(el('span', 'build-stamp', 'build ' + window.BUILD.version));   // which push this page came from
     const teachBody = el('div', 'panel-body'); teachPanel.appendChild(teachBody);
     teachPanel.open = !embed;
     if (embed && !Embed.flag('controls', true)) teachPanel.hidden = true;

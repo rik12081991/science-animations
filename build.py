@@ -7,7 +7,13 @@
 Each output inlines core/styles.css, all core scripts and the topic script(s), so the
 file works offline from anywhere (Files app on iPad, AirDrop, a static host, an iframe).
 """
-import re, sys, pathlib
+import re, sys, pathlib, subprocess, datetime
+
+def _version():
+    try: h = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip()
+    except Exception: h = ''
+    return (h or 'dev') + ' ' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M')   # hash is the commit being built on, i.e. the parent of the commit that ships this build
+VERSION = _version()   # shown in the panel header so a stale cached page can be spotted
 
 ROOT = pathlib.Path(__file__).resolve().parent
 DIST = ROOT / 'dist'
@@ -35,8 +41,7 @@ def build(topic_ids, out_name, default_topic=None, student=False):
     inline = ''.join(f'<script>\n{read(s)}\n</script>\n' for s in scripts)
     if default_topic:
         inline += f"<script>window.DEFAULT_TOPIC = '{default_topic}';</script>\n"
-    if student:
-        inline += "<script>window.BUILD = { student: true };</script>\n"
+    inline += f"<script>window.BUILD = {{ student: {'true' if student else 'false'}, version: '{VERSION}' }};</script>\n"
     html = re.sub(r'(<script src="[^"]+"></script>\n)+', lambda m: inline, html, count=1)
     title = default_topic.replace('-', ' ').title() if default_topic else 'Science Animations'
     html = html.replace('<title>Science Animations</title>', f'<title>{title} · Science Animations</title>')

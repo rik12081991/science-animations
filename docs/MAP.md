@@ -2,13 +2,13 @@
 
 Read a range with `sed -n START,ENDp FILE`. Regenerate: `python3 tools/mapgen.py`.
 
-## core/app.js (171 lines)
+## core/app.js (172 lines)
 - 5: start()
-- 84: syncPlay()
-- 88: reset()
-- 141: launcher()
-- 157: registerSW()
-- 162: boot()
+- 85: syncPlay()
+- 89: reset()
+- 142: launcher()
+- 158: registerSW()
+- 163: boot()
 
 ## core/canvas.js (185 lines)
 - 3: create()
