@@ -3087,6 +3087,9 @@ window.TopicDesigns["electrolysis"] = {
   const designSchema = [
     { id: 'colour.background', type: 'colour', label: 'Background', default: '#ffffff', group: 'Colours' },
     { id: 'colour.mirror', type: 'colour', label: 'Mirror', default: '#334155', group: 'Colours' },
+    { id: 'grid.show', type: 'toggle', label: 'Graph-paper grid (1 cm squares)', default: true, group: 'Layout' },
+    { id: 'grid.colour', type: 'colour', label: 'Grid lines', default: '#dbeafe', group: 'Colours' },
+    { id: 'grid.major', type: 'range', label: 'Heavier grid line every', min: 0, max: 10, step: 1, default: 5, unit: 'cm', group: 'Layout' },
     { id: 'colour.mirrorBack', type: 'colour', label: 'Mirror back (hatching)', default: '#94a3b8', group: 'Colours' },
     { id: 'colour.incident', type: 'colour', label: 'Incident ray', default: '#dc2626', group: 'Colours' },
     { id: 'colour.reflected', type: 'colour', label: 'Reflected ray', default: '#2563eb', group: 'Colours' },
@@ -3147,7 +3150,11 @@ window.TopicDesigns["electrolysis"] = {
     { id: 'equal', type: 'toggle', label: 'i = r', default: false, group: 'Show and label', showIf: single },
     { id: 'virtual', type: 'toggle', label: 'Virtual rays (dashed)', default: false, group: 'Show and label', showIf: object },
     { id: 'image', type: 'toggle', label: 'Image and distances', default: false, group: 'Show and label', showIf: object },
-    { id: 'characteristics', type: 'toggle', label: 'Image characteristics', default: false, group: 'Show and label', showIf: object }
+    { id: 'characteristics', type: 'toggle', label: 'Image characteristics', default: false, group: 'Show and label', showIf: object },
+    // hide a ray's line in any mode (the class predicts where it goes); overrides the step and the Show toggles
+    { id: 'hide.incident', type: 'toggle', label: 'Incident rays', default: false, group: 'Hide lines' },
+    { id: 'hide.reflected', type: 'toggle', label: 'Reflected rays', default: false, group: 'Hide lines' },
+    { id: 'hide.virtual', type: 'toggle', label: 'Virtual rays', default: false, group: 'Hide lines', showIf: object }
   ];
   // what free-running mode shows without any toggle
   const FREE_FLAGS = { 'single-ray': { incident: true, reflected: true }, object: { object: true, eye: true, incident: true, reflected: true, virtual: true, image: true } };
@@ -3178,6 +3185,7 @@ window.TopicDesigns["electrolysis"] = {
     // element e is drawn when the current step (or free mode) reveals it or its toggle is on;
     // it is labelled in story mode always, in free mode only when its toggle is on
     function shown(e) {
+      if (C()['hide.' + e]) return false;
       const f = isStory() ? steps[pending >= 0 ? pending : storyStep].flags : FREE_FLAGS[preset.id];
       return !!(f[e] || C()[e]);
     }
@@ -3427,7 +3435,8 @@ window.TopicDesigns["electrolysis"] = {
 
     function drawShape(d, s, base, tip, col, mirrored) {
       const shape = d['object.shape'];
-      if (shape === 'arrow') { g.line(base[0], base[1], tip[0], tip[1], col, 4 * s); g.arrowHead(tip[0], tip[1], -Math.PI / 2, col, d['size.head'] * s * 1.3); return; }
+      // arrowHead's point sits `size` beyond its anchor, so anchor it below the tip: rays then leave from the very top
+      if (shape === 'arrow') { const hs = d['size.head'] * s * 1.3; g.line(base[0], base[1], tip[0], tip[1] + hs, col, 4 * s); g.arrowHead(tip[0], tip[1] + hs, -Math.PI / 2, col, hs); return; }
       // letter sized so its cap height runs exactly from base to tip, so rays leave its top
       const h = base[1] - tip[1], o = { size: h, weight: '800', font: d['text.font'], color: col, align: 'center', baseline: 'alphabetic' };
       g.textWidth(shape, o); g.ctx.textBaseline = 'alphabetic';   // sets ctx.font the same way g.text will; ascent is measured from the baseline
@@ -3542,9 +3551,18 @@ window.TopicDesigns["electrolysis"] = {
       lines.forEach((ln, i) => g.formula(bx + 12 * s, y0 + i * lh, ln, o));
     }
 
+    // 1 cm graph paper, anchored on the mirror and the object base line so the object and its image sit on the same squares
+    function drawGrid(d, s, L) {
+      const cell = g.w / d['scale.cmPerWidth'], major = d['grid.major'], col = d['grid.colour'], dark = g.withAlpha(d['colour.mirror'], 0.28);
+      const ax = L.kind === 'single' ? L.hit[0] : L.mx, ay = L.kind === 'single' ? L.hit[1] : L.baseY;
+      const line = (x0, y0, x1, y1, k) => g.line(x0, y0, x1, y1, major && k % major === 0 ? dark : col, (major && k % major === 0 ? 1.2 : 0.8) * s);
+      for (let k = 0, x = ax; x <= g.w + cell; k++, x += cell) { line(x, 0, x, g.h, k); if (k) line(ax - k * cell, 0, ax - k * cell, g.h, k); }
+      for (let k = 0, y = ay; y <= g.h + cell; k++, y += cell) { line(0, y, g.w, y, k); if (k) line(0, ay - k * cell, g.w, ay - k * cell, k); }
+    }
     function draw() {
       const d = D(), L = layout(), s = L.s;
       g.begin(d['colour.background']);
+      if (d['grid.show']) drawGrid(d, s, L);
       if (L.kind === 'single') drawSingle(L, d); else drawObject(L, d);
       const ts = d['text.size'] * s;
       if (d['text.showTitle']) g.text(12 * s, 16 * s, preset.heading, { font: d['text.font'], size: ts * 1.1, weight: '800', color: d['colour.text'] });

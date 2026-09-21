@@ -5,3 +5,4 @@
 - [Fuel-cell baseline](baseline_fuel_cell.md) — acid step6 cathode/electrode-label layout, alkaline step2 anode look, free-run bulb/switch/counters
 - [Molten PbBr2 free-run baseline](baseline_molten_pbbr2_free.md) — "Ions shown" segmented control (Cations/Anions/Both), no per-ion toggles, Next/Back hidden in free mode
 - [Taller-screenshot workaround](reference_taller_screenshot_workaround.md) — verify.py --shot only captures 760px viewport; use direct Chrome call for below-the-fold panels
+- [Reflection object-preset steps baseline](baseline_reflection_object_steps.md) — `--steps N` off-by-one resets to Start at N=stepCount; use stepCount-1; confirmed grid/ray-origin geometry ok
