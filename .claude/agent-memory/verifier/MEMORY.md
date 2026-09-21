@@ -6,3 +6,5 @@
 - [Molten PbBr2 free-run baseline](baseline_molten_pbbr2_free.md) — "Ions shown" segmented control (Cations/Anions/Both), no per-ion toggles, Next/Back hidden in free mode
 - [Taller-screenshot workaround](reference_taller_screenshot_workaround.md) — verify.py --shot only captures 760px viewport; use direct Chrome call for below-the-fold panels
 - [Reflection object-preset steps baseline](baseline_reflection_object_steps.md) — `--steps N` off-by-one resets to Start at N=stepCount; use stepCount-1; confirmed grid/ray-origin geometry ok
+- [Design param not URL-overridable via --param](reference_design_param_not_url_overridable.md) — `--param object.shape=F` silently no-ops; design-schema items need JSON `design={...}` param
+- [Reflection object F-shape ray-anchor bug](bug_reflection_object_fshape_ray_anchors.md) — FIXED 2026-09-21: all 6 anchors now touch within ~1-2px; see file for prior floating-anchor symptom

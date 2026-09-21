@@ -3073,7 +3073,7 @@ window.TopicDesigns["electrolysis"] = {
 <script>
 // Reflection at a plane mirror (IGCSE 0625 P03.2.1). Two presets: a single ray (incident ray, normal,
 // angle of incidence, reflected ray, angle of reflection, i = r) and an object in front of the mirror
-// (two rays into an eye, virtual rays traced back, image and its characteristics).
+// (one ray into an eye from each marked point of the object, virtual rays traced back, image and its characteristics).
 // Every named feature is a "Show and label" toggle so a pupil can see the term next to the thing it names.
 (function () {
   const PRESETS = [
@@ -3120,7 +3120,7 @@ window.TopicDesigns["electrolysis"] = {
     { id: 'layout.eyeX', type: 'range', label: 'Eye position across', min: 0.03, max: 0.3, step: 0.01, default: 0.1, group: 'Layout' },
     { id: 'layout.eyeY', type: 'range', label: 'Eye position down', min: 0.05, max: 0.5, step: 0.01, default: 0.2, group: 'Layout' },
     { id: 'scale.cmPerWidth', type: 'range', label: 'Scale: cm across the whole canvas', min: 20, max: 80, step: 1, default: 40, unit: 'cm', group: 'Layout' },
-    { id: 'object.shape', type: 'segmented', label: 'Object', options: [{ value: 'arrow', label: 'Arrow' }, { value: 'F', label: 'Letter F' }, { value: 'R', label: 'Letter R' }], default: 'arrow', group: 'Layout' },
+    { id: 'object.shape', type: 'segmented', label: 'Object', options: [{ value: 'arrow', label: 'Arrow' }, { value: 'F', label: 'Letter F' }], default: 'arrow', group: 'Layout' },
     { id: 'motion.rayTime', type: 'range', label: 'Time for a ray to travel', min: 0.2, max: 2, step: 0.1, default: 0.7, unit: 's', group: 'Motion' },
     { id: 'motion.pulses', type: 'toggle', label: 'Light pulses along rays (free mode)', default: true, group: 'Motion' },
     { id: 'motion.pulseSpeed', type: 'range', label: 'Pulse speed', min: 0.2, max: 3, step: 0.1, default: 1, group: 'Motion' },
@@ -3229,10 +3229,10 @@ window.TopicDesigns["electrolysis"] = {
         ['equal', 'Law of reflection: the angle of incidence equals the angle of reflection, i = r. Drag the handle or move the slider and the reflected ray follows.', { equal: true }]
       ] : [
         ['object', () => 'An object stands ' + fmtCm(dist()) + ' in front of the mirror. An eye looks into the mirror.', { object: true, eye: true }],
-        ['incident', 'Light from the top of the object spreads out in every direction. Two of the rays that reach the mirror are shown: the incident rays.', { incident: true }],
+        ['incident', 'Light from every point on the object spreads out in every direction. One ray from each marked point is shown reaching the mirror: the incident rays.', { incident: true }],
         ['reflected', 'Each ray reflects off the mirror (angle of incidence = angle of reflection) and enters the eye.', { reflected: true }],
         ['virtual', 'To the eye the rays seem to come from behind the mirror. Extend the reflected rays backwards (dashed lines) to find where they appear to come from.', { virtual: true }],
-        ['image', () => 'The dashed lines meet at the image of the top of the object. The image is the same distance behind the mirror (' + fmtCm(dist()) + ') as the object is in front.', { image: true }],
+        ['image', () => 'Each dashed line leads back to the image of the point it came from. The image is the same distance behind the mirror (' + fmtCm(dist()) + ') as the object is in front.', { image: true }],
         ['characteristics', 'The image is the same size as the object, upright, the same distance from the mirror as the object, and laterally inverted (left and right swapped).', { characteristics: true }],
         ['virtualExplain', 'The image is virtual: no light actually passes through it, the rays only appear to come from it. A virtual image cannot be formed on a screen.', {}]
       ];
@@ -3368,10 +3368,11 @@ window.TopicDesigns["electrolysis"] = {
       const dpx = dist() / d['scale.cmPerWidth'] * g.w, baseY = objectY() * g.h, h = d['size.object'] * g.h;
       const tip = [mx - dpx, baseY - h], imgTip = [mx + dpx, baseY - h];
       const eye = eyePos ? [eyePos[0] * g.w, eyePos[1] * g.h] : [d['layout.eyeX'] * g.w, d['layout.eyeY'] * g.h], es = d['size.eye'] * g.h;
-      const rays = [-0.3, 0.3].map(k => {
-        const E = [eye[0] + es * 0.3, eye[1] + es * k];      // inside the pupil, on the side facing the mirror
-        const t = (imgTip[0] - mx) / (imgTip[0] - E[0]);
-        return { src: tip, hit: [mx, imgTip[1] + t * (E[1] - imgTip[1])], end: E };
+      const pts = sourcePoints(d, [tip[0], baseY], h), n = pts.length;
+      const rays = pts.map((P, k) => {
+        const E = [eye[0] + es * 0.3, eye[1] + es * 0.6 * (k / (n - 1) - 0.5)];   // inside the pupil, on the side facing the mirror
+        const img = [2 * mx - P[0], P[1]], t = (img[0] - mx) / (img[0] - E[0]);
+        return { src: P, hit: [mx, img[1] + t * (E[1] - img[1])], end: E, img };
       });
       return { s, kind: 'object', mx, mt, mb, dpx, baseY, h, tip, base: [tip[0], baseY], imgTip, imgBase: [imgTip[0], baseY], eye, es, rays, nLen: d['layout.normalLength'] * g.w * 0.6 };
     }
@@ -3433,15 +3434,24 @@ window.TopicDesigns["electrolysis"] = {
       if (prog.incident >= 1 && prog.reflected >= 1) pulses(d, s, [[L.src, L.hit, d['colour.incident']], [L.hit, L.end, d['colour.reflected']]]);
     }
 
+    // letter sized so its cap height runs exactly from base to tip; left/right are the glyph's edges from its centre line
+    function glyphMetrics(d, h) {
+      const shape = d['object.shape'], o = { size: h, weight: '800', font: d['text.font'], align: 'center', baseline: 'alphabetic' };
+      g.textWidth(shape, o); g.ctx.textBaseline = 'alphabetic'; g.ctx.textAlign = 'center';   // sets ctx.font the same way g.text will; bounds are then measured from the centre line
+      const m0 = g.ctx.measureText(shape), asc = m0.actualBoundingBoxAscent || h * 0.72, size = h * h / asc, f = size / h;
+      return { size, left: -(m0.actualBoundingBoxLeft == null ? m0.width / 2 : m0.actualBoundingBoxLeft) * f, right: (m0.actualBoundingBoxRight == null ? m0.width / 2 : m0.actualBoundingBoxRight) * f };
+    }
+    // where rays leave the object: arrow = tip and base; F = top of the stem, end of the top bar, bottom of the stem
+    function sourcePoints(d, base, h) {
+      if (d['object.shape'] === 'arrow') return [[base[0], base[1] - h], base];
+      const m = glyphMetrics(d, h);
+      return [[base[0] + m.left, base[1] - h], [base[0] + m.right, base[1] - h], [base[0] + m.left, base[1]]];
+    }
     function drawShape(d, s, base, tip, col, mirrored) {
       const shape = d['object.shape'];
       // arrowHead's point sits `size` beyond its anchor, so anchor it below the tip: rays then leave from the very top
       if (shape === 'arrow') { const hs = d['size.head'] * s * 1.3; g.line(base[0], base[1], tip[0], tip[1] + hs, col, 4 * s); g.arrowHead(tip[0], tip[1] + hs, -Math.PI / 2, col, hs); return; }
-      // letter sized so its cap height runs exactly from base to tip, so rays leave its top
-      const h = base[1] - tip[1], o = { size: h, weight: '800', font: d['text.font'], color: col, align: 'center', baseline: 'alphabetic' };
-      g.textWidth(shape, o); g.ctx.textBaseline = 'alphabetic';   // sets ctx.font the same way g.text will; ascent is measured from the baseline
-      const asc = g.ctx.measureText(shape).actualBoundingBoxAscent || h * 0.72;
-      o.size = h * h / asc;
+      const m = glyphMetrics(d, base[1] - tip[1]), o = { size: m.size, weight: '800', font: d['text.font'], color: col, align: 'center', baseline: 'alphabetic' };
       g.ctx.save(); g.ctx.translate(base[0], base[1]); if (mirrored) g.ctx.scale(-1, 1);
       g.text(0, 0, shape, o);
       g.ctx.restore();
@@ -3487,12 +3497,12 @@ window.TopicDesigns["electrolysis"] = {
         if (labelled('reflected') && prog.reflected >= 1) labelAlong(L.rays[0].hit, L.rays[0].end, 0.62, 'reflected rays', true, lab(d, { colour: d['colour.reflected'] }));
       }
       if (shown('virtual')) {
-        L.rays.forEach(r => R.ray(r.hit, L.imgTip, { colour: d['colour.virtual'], width: rw, frac: prog.virtual, arrow: false, dashed: true }));
-        if (labelled('virtual') && prog.virtual >= 1) labelAlong(L.rays[1].hit, L.imgTip, 0.5, 'virtual rays', false, lab(d, { colour: d['colour.virtual'] }));
+        L.rays.forEach(r => R.ray(r.hit, r.img, { colour: d['colour.virtual'], width: rw, frac: prog.virtual, arrow: false, dashed: true }));
+        if (labelled('virtual') && prog.virtual >= 1) labelAlong(L.rays[1].hit, L.rays[1].img, 0.5, 'virtual rays', false, lab(d, { colour: d['colour.virtual'] }));
       }
       if (shown('image')) g.alpha(prog.image || 0, () => {
         drawShape(d, s, L.imgBase, L.imgTip, d['colour.image'], true);
-        g.circle(L.imgTip[0], L.imgTip[1], 3.5 * s, d['colour.virtual']);
+        L.rays.forEach(r => g.circle(r.img[0], r.img[1], 3.5 * s, d['colour.virtual']));
         if (labelled('image')) {
           R.label(L.imgBase[0], L.baseY + 14 * s, 'image', lab(d, { align: 'center', bg: false }));
           const y = L.baseY + 36 * s, col = g.withAlpha(d['colour.text'], 0.7), txt = fmtCm(dist());
