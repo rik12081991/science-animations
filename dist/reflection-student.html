@@ -1699,10 +1699,10 @@ body.focus .focus-exit { display: inline-block; }
       lines.forEach((ln, i) => g.formula(bx + 12 * s, y0 + i * lh, ln, o));
     }
 
-    // 1 cm graph paper, anchored on the mirror and the object base line so the object and its image sit on the same squares
+    // 1 cm graph paper, anchored on the mirror (fixed) so the object and its image sit on the same squares either side of it
     function drawGrid(d, s, L) {
       const cell = g.w / d['scale.cmPerWidth'], major = d['grid.major'], col = d['grid.colour'], dark = g.withAlpha(d['colour.mirror'], 0.28);
-      const ax = L.kind === 'single' ? L.hit[0] : L.mx, ay = L.kind === 'single' ? L.hit[1] : L.baseY;
+      const ax = L.kind === 'single' ? L.hit[0] : L.mx, ay = L.kind === 'single' ? L.hit[1] : L.mb;   // fixed anchors: the grid never moves with the object
       const line = (x0, y0, x1, y1, k) => g.line(x0, y0, x1, y1, major && k % major === 0 ? dark : col, (major && k % major === 0 ? 1.2 : 0.8) * s);
       for (let k = 0, x = ax; x <= g.w + cell; k++, x += cell) { line(x, 0, x, g.h, k); if (k) line(ax - k * cell, 0, ax - k * cell, g.h, k); }
       for (let k = 0, y = ay; y <= g.h + cell; k++, y += cell) { line(0, y, g.w, y, k); if (k) line(0, ay - k * cell, g.w, ay - k * cell, k); }
