@@ -1582,12 +1582,21 @@ body.focus .focus-exit { display: inline-block; }
       if (prog.incident >= 1 && prog.reflected >= 1) pulses(d, s, [[L.src, L.hit, d['colour.incident']], [L.hit, L.end, d['colour.reflected']]]);
     }
 
-    // letter sized so its cap height runs exactly from base to tip; left/right are the glyph's edges from its centre line
+    // letter sized so its ink runs exactly from base to tip; left/right are the ink edges from its centre line, dx/dy where to
+    // draw it (left-aligned, alphabetic). Measured by drawing offscreen and scanning pixels: Safari's measureText ink bounds are wrong.
+    const glyphCache = {};
     function glyphMetrics(d, h) {
-      const shape = d['object.shape'], o = { size: h, weight: '800', font: d['text.font'], align: 'center', baseline: 'alphabetic' };
-      g.textWidth(shape, o); g.ctx.textBaseline = 'alphabetic'; g.ctx.textAlign = 'center';   // sets ctx.font the same way g.text will; bounds are then measured from the centre line
-      const m0 = g.ctx.measureText(shape), asc = m0.actualBoundingBoxAscent || h * 0.72, size = h * h / asc, f = size / h;
-      return { size, left: -(m0.actualBoundingBoxLeft == null ? m0.width / 2 : m0.actualBoundingBoxLeft) * f, right: (m0.actualBoundingBoxRight == null ? m0.width / 2 : m0.actualBoundingBoxRight) * f };
+      const shape = d['object.shape'], key = shape + '|' + d['text.font'] + '|' + Math.round(h);
+      if (glyphCache[key]) return glyphCache[key];
+      g.textWidth(shape, { size: h, weight: '800', font: d['text.font'] });   // sets g.ctx.font the same way g.text will
+      const c = document.createElement('canvas'), n = Math.ceil(h * 3), x0 = h, y0 = h * 2; c.width = n; c.height = n;
+      const cx = c.getContext('2d'); cx.font = g.ctx.font; cx.textAlign = 'left'; cx.textBaseline = 'alphabetic'; cx.fillStyle = '#000';
+      cx.fillText(shape, x0, y0);
+      const px = cx.getImageData(0, 0, n, n).data; let minX = n, maxX = -1, minY = n, maxY = -1;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (px[(y * n + x) * 4 + 3] > 64) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+      if (maxX < 0) return { size: h, dx: 0, dy: 0, left: -h / 4, right: h / 4 };
+      const f = h / (maxY + 1 - minY), size = h * f, l = (minX - x0) * f, r = (maxX + 1 - x0) * f, half = (l + r) / 2;
+      return (glyphCache[key] = { size, dx: -half, dy: (y0 - (maxY + 1)) * f, left: l - half, right: r - half });
     }
     // where rays leave the object: arrow = tip and base; F = top of the stem, end of the top bar, bottom of the stem
     function sourcePoints(d, base, h) {
@@ -1599,9 +1608,9 @@ body.focus .focus-exit { display: inline-block; }
       const shape = d['object.shape'];
       // arrowHead's point sits `size` beyond its anchor, so anchor it below the tip: rays then leave from the very top
       if (shape === 'arrow') { const hs = d['size.head'] * s * 1.3; g.line(base[0], base[1], tip[0], tip[1] + hs, col, 4 * s); g.arrowHead(tip[0], tip[1] + hs, -Math.PI / 2, col, hs); return; }
-      const m = glyphMetrics(d, base[1] - tip[1]), o = { size: m.size, weight: '800', font: d['text.font'], color: col, align: 'center', baseline: 'alphabetic' };
+      const m = glyphMetrics(d, base[1] - tip[1]), o = { size: m.size, weight: '800', font: d['text.font'], color: col, align: 'left', baseline: 'alphabetic' };
       g.ctx.save(); g.ctx.translate(base[0], base[1]); if (mirrored) g.ctx.scale(-1, 1);
-      g.text(0, 0, shape, o);
+      g.text(m.dx, m.dy, shape, o);   // left-aligned and centred by hand, matching glyphMetrics
       g.ctx.restore();
     }
     function drawEye(d, s, L) {
