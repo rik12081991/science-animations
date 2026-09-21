@@ -3,12 +3,12 @@
 Browser-based classroom animations. No install, no internet needed once open, works on iPad.
 
 - **Run:** open `index.html` in Safari or Chrome.
-- **Build single files:** `python3 build.py` → `dist/electrolysis.html`, `dist/fuel-cell.html`, `dist/all.html` (email it, AirDrop it, host it, iframe it).
+- **Build single files:** `python3 build.py` → `dist/electrolysis.html`, `dist/fuel-cell.html`, `dist/reflection.html`, `dist/all.html` (email it, AirDrop it, host it, iframe it).
 - **Embed in another site:** see `docs/EMBED.md`.
 - **Add a topic:** see `docs/NEW-TOPIC.md`.
 - **Change the look:** open the Design panel, adjust, then Export and replace `topics/electrolysis.design.js`.
 
-Topics: **Electrolysis** and **Hydrogen fuel cell** (acidic or alkaline half-equations; hydrogen oxidised at the anode, electrons round the circuit light a bulb, oxygen reduced at the cathode, water out).
+Topics: **Electrolysis**, **Reflection at a plane mirror** (single ray with normal and angles i = r; object, eye, virtual rays and image with its characteristics) and **Hydrogen fuel cell** (acidic or alkaline half-equations; hydrogen oxidised at the anode, electrons round the circuit light a bulb, oxygen reduced at the cathode, water out).
 
 `python3 build.py` makes two files per topic: `dist/<topic>.html` for teachers (with the Design panel) and `dist/<topic>-student.html` for students (no Design panel; colours, sizes and text are fixed by `topics/<topic>.design.js`; the panel is called Setup controls).
 

@@ -25,12 +25,12 @@ setTimeout(function(){
       if (q.get('labels')) { var L=[]; for (var i=0;i<n;i++){ L.push((sim.questionFor(i)?'Q+':'')+ (sim.stepLabelFor? sim.stepLabelFor(i):i)); } out.push(L.join(' ')); }
     } else if (q.get('open')) {
       window.app.sim.openQuestion(parseInt(q.get('open')));
-      window.app.sim.draw(); out.push('ions '+window.app.sim.ionCount+' step '+window.app.sim.step);
+      window.app.sim.draw(); out.push(window.app.sim.status!==undefined ? 'step '+window.app.sim.step+' '+window.app.sim.status : 'ions '+window.app.sim.ionCount+' step '+window.app.sim.step);
     } else {
       var steps = parseInt(q.get('steps')||'0'), secs = parseFloat(q.get('sim')||'3'), last = parseFloat(q.get('last')||secs);
       for (var k=0;k<steps;k++){ window.app.sim.action('next'); var ss = k===steps-1 ? last : secs; for (var i=0;i<ss*60;i++) window.app.sim.update(1/60); window.app.sim.draw(); }
       if (!steps) for (var i=0;i<secs*60;i++) window.app.sim.update(1/60);
-      window.app.sim.draw(); out.push('ions '+window.app.sim.ionCount+' step '+window.app.sim.step+' stuck '+window.app.sim.stuck+' '+JSON.stringify(window.app.sim.speciesCounts)+' busy '+window.app.sim.busyIons.join(','));
+      window.app.sim.draw(); out.push(window.app.sim.status!==undefined ? 'step '+window.app.sim.step+' '+window.app.sim.status : 'ions '+window.app.sim.ionCount+' step '+window.app.sim.step+' stuck '+window.app.sim.stuck+' '+JSON.stringify(window.app.sim.speciesCounts)+' busy '+window.app.sim.busyIons.join(','));
     }
   } catch(e){ window.__errs.push('step: '+e.message+' '+e.stack); }
   var p=document.createElement('pre');p.id='errlog';p.textContent=(window.__errs.join('\n')||'NO ERRORS')+' | '+out.join(' | ');document.body.appendChild(p);

@@ -1,7 +1,7 @@
 # Science_animations
 
 GCSE classroom animations. Vanilla JS + Canvas, no dependencies, offline on iPad Safari, iframe-embeddable.
-Topics: `topics/electrolysis.js`, `topics/fuel-cell.js` (added 2026-09-17). Framework in `core/`. `python3 build.py` -> `dist/<topic>.html` (teacher) + `dist/<topic>-student.html` (2026-09-18: `window.BUILD={student:true}`, Design panel hidden, design locked to `topics/<topic>.design.js`, panel titled Setup controls).
+Topics: `topics/electrolysis.js`, `topics/fuel-cell.js` (added 2026-09-17), `topics/reflection.js` (added 2026-09-18, first of five optics topics planned in `docs/WAVES-PLAN.md`; shared ray helpers in `core/rays.js`). Framework in `core/`. `python3 build.py` -> `dist/<topic>.html` (teacher) + `dist/<topic>-student.html` (2026-09-18: `window.BUILD={student:true}`, Design panel hidden, design locked to `topics/<topic>.design.js`, panel titled Setup controls).
 Docs: `docs/EMBED.md`, `docs/NEW-TOPIC.md`, `README.md` (modes and keys). Git repo, remote github.com/rik12081991/science-animations; GitHub Pages serves the main branch root (index.html + core/ + topics/, offline via sw.js).
 
 ## Token rules (the last session cost 5x what it needed)
@@ -21,6 +21,8 @@ Teaching control `ions` (cations / anions / both, 2026-09-18) hides one sign of 
 Design panel (~65 controls) exports to `topics/electrolysis.design.js`.
 Fuel cell topic: same three modes, presets `acid` (H+ crosses, water at cathode) and `alkaline` (OH- crosses, water at anode). Discrete electron accounting: `stored.anode` -> `transit` along the wire (only when the circuit is closed) -> `stored.cathode`; a cathode reaction needs 4 stored. Acid story has 11 steps, alkaline 11 (ions step comes after reduce). Typed equation answers are compared as sorted term sets via `eqKey`.
 Replenish is deferred (2026-09-15): discharged electrolyte ions are "owed" and return as a batch only once that species is nearly used up, so the class sees ions turn into atoms before new ones appear. Water-derived H+/OH- return at once. Debug getters on the sim: `stuck`, `speciesCounts`.
+
+Reflection topic (2026-09-18): presets `single-ray` (8 steps: incident, normal, angle i, reflected, angle r, i = r) and `object` (9 steps: object+eye, two incident rays, reflected, virtual dashed, image + cm distances, characteristics, virtual explanation). "Show and label" toggles (incident, normal, angleI, reflected, angleR, equal, virtual, image, characteristics) reveal an element early in step mode and are the only source of labels in free mode (`shown()`/`labelled()`). Teaching sliders `angle` (5-85°) and `distance` (2-12 cm); drag the source handle / object on the canvas in any mode. Ray reveal animates via `prog[e]` with `CHAIN` ordering. `tools/harness.js` prints `sim.status` when a sim defines it (non-electrolysis sims need no ion getters).
 
 Open items: free-running CuSO4 inert with replenish off leaves the cathode idle instead of switching to H2 (flagged, not fixed). Not yet tested on a real iPad. No GitHub Pages yet. Future topics mentioned: diffusion, rates, states of matter.
 

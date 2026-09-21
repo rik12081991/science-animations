@@ -44,4 +44,6 @@ Rules of thumb:
 - Scale every pixel size by `g.w / 800` so it looks the same on an iPad and a projector.
 - Use `g.formula(x, y, 'SO_4^2-', {...})` for chemical text: `_` makes a subscript, `^` a superscript.
 - Use `Particles.wander / confine / separate` from `core/particles.js` for particle motion.
+- Ray diagrams: `Rays.create(g)` in `core/rays.js` gives `ray`, `normal`, `angleArc`, `label`, `wavelengthColour`; see `topics/reflection.js`.
+- For `tools/verify.py`: expose `step`, `stepCount`, `questionsFor(i)`, `questionFor(i)`, `openQuestion(i)` and a `status` getter (one line of state); add the topic's presets to `PRESETS` in `tools/verify.py`. Add the file to `index.html` and `sw.js`.
 - Run `python3 build.py` to get `dist/<id>.html`.

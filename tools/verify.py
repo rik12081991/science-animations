@@ -17,7 +17,8 @@ from urllib.parse import quote
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 PRESETS = {'electrolysis': ['molten-pbbr2', 'molten-nacl', 'molten-al2o3', 'brine', 'dilute-nacl', 'cuso4-inert', 'cuso4-copper', 'dilute-h2so4'],
-           'fuel-cell': ['acid', 'alkaline']}
+           'fuel-cell': ['acid', 'alkaline'],
+           'reflection': ['single-ray', 'object']}
 SCRATCH = os.environ.get('CLAUDE_SCRATCHPAD') or tempfile.gettempdir()
 
 def build(topic):
