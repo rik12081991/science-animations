@@ -1501,7 +1501,7 @@ body.focus .focus-exit { display: inline-block; }
       ['incident', 'reflected', 'virtual', 'image'].forEach(e => {
         if (!shown(e)) { prog[e] = 0; return; }
         const p = CHAIN[e];
-        if (p && shown(p) && (prog[p] || 0) < 1) return;
+        if (p && shown(p) && (prog[p] || 0) < 1) { prog[e] = prog[e] || 0; return; }   // waiting: stays hidden, not undefined (which would draw the full ray)
         prog[e] = Math.min(1, (prog[e] || 0) + dt / T);
       });
     }
@@ -1571,14 +1571,14 @@ body.focus .focus-exit { display: inline-block; }
       if (shown('angleI')) R.angleArc(L.hit, -Math.PI / 2 - side * L.i, -Math.PI / 2, arcR, { colour: d['colour.angleI'], width: 1.5 * s, label: labelled('angleI') ? angleText(d, 'i') : null, text: lab(d, { colour: d['colour.angleI'] }) });
       if (shown('angleR')) R.angleArc(L.hit, -Math.PI / 2, -Math.PI / 2 + side * L.i, arcR * (shown('angleI') ? 0.75 : 1), { colour: d['colour.angleR'], width: 1.5 * s, label: labelled('angleR') ? angleText(d, 'r') : null, text: lab(d, { colour: d['colour.angleR'] }) });
       if (shown('incident')) {
-        R.ray(L.src, L.hit, { colour: d['colour.incident'], width: rw, frac: prog.incident, head, arrowAt: 0.5 });
+        R.ray(L.src, L.hit, { colour: d['colour.incident'], width: rw, frac: prog.incident || 0, head, arrowAt: 0.5 });
         if (labelled('incident') && prog.incident >= 1) labelAlong(L.src, L.hit, 0.25, 'incident ray', false, lab(d, { colour: d['colour.incident'] }));
         g.circle(L.hit[0], L.hit[1], 3 * s, d['colour.text']);
         if (labelled('incident')) R.label(L.hit[0], L.hit[1] + 20 * s, 'point of incidence', lab(d, { align: 'center', bg: false }));
         handle(d, s, L.src);
       }
       if (shown('reflected')) {
-        R.ray(L.hit, L.end, { colour: d['colour.reflected'], width: rw, frac: prog.reflected, head, arrowAt: 0.5 });
+        R.ray(L.hit, L.end, { colour: d['colour.reflected'], width: rw, frac: prog.reflected || 0, head, arrowAt: 0.5 });
         if (labelled('reflected') && prog.reflected >= 1) labelAlong(L.hit, L.end, 0.75, 'reflected ray', false, lab(d, { colour: d['colour.reflected'] }));
       }
       if (shown('equal') && labelled('equal')) R.label(L.hit[0], Math.min(L.src[1], L.hit[1] - L.nLen) - 22 * s, 'i = r   (angle of incidence = angle of reflection)', lab(d, { align: 'center', size: d['text.size'] * s }));
@@ -1649,15 +1649,15 @@ body.focus .focus-exit { display: inline-block; }
         if (labelled('angleR')) R.label(r0.hit[0] + lr * Math.cos(ar + out), r0.hit[1] + lr * Math.sin(ar + out), 'r = ' + deg + '°', lab(d, { colour: d['colour.angleR'], align: 'right' }));
       }
       if (shown('incident')) {
-        L.rays.forEach(r => R.ray(r.src, r.hit, { colour: d['colour.incident'], width: rw, frac: prog.incident, head, arrowAt: 0.5 }));
+        L.rays.forEach(r => R.ray(r.src, r.hit, { colour: d['colour.incident'], width: rw, frac: prog.incident || 0, head, arrowAt: 0.5 }));
         if (labelled('incident') && prog.incident >= 1) R.label(L.tip[0] - 14 * s, L.tip[1] + 10 * s, 'incident rays', lab(d, { colour: d['colour.incident'], align: 'right' }));
       }
       if (shown('reflected')) {
-        L.rays.forEach(r => R.ray(r.hit, r.end, { colour: d['colour.reflected'], width: rw, frac: prog.reflected, head, arrowAt: 0.5 }));
+        L.rays.forEach(r => R.ray(r.hit, r.end, { colour: d['colour.reflected'], width: rw, frac: prog.reflected || 0, head, arrowAt: 0.5 }));
         if (labelled('reflected') && prog.reflected >= 1) labelAlong(L.rays[0].hit, L.rays[0].end, 0.62, 'reflected rays', true, lab(d, { colour: d['colour.reflected'] }));
       }
       if (shown('virtual')) {
-        L.rays.forEach(r => R.ray(r.hit, r.img, { colour: d['colour.virtual'], width: rw, frac: prog.virtual, arrow: false, dashed: true }));
+        L.rays.forEach(r => R.ray(r.hit, r.img, { colour: d['colour.virtual'], width: rw, frac: prog.virtual || 0, arrow: false, dashed: true }));
         if (labelled('virtual') && prog.virtual >= 1) labelAlong(L.rays[1].hit, L.rays[1].img, 0.5, 'virtual rays', false, lab(d, { colour: d['colour.virtual'] }));
       }
       if (shown('image')) g.alpha(prog.image || 0, () => {
@@ -1805,7 +1805,7 @@ window.TopicDesigns["reflection"] = {
 
 </script>
 <script>window.DEFAULT_TOPIC = 'reflection';</script>
-<script>window.BUILD = { student: false, version: 'cdb9f25 2026-09-21 18:22' };</script>
+<script>window.BUILD = { student: false, version: '0c5f4f9 2026-09-21 19:23' };</script>
 <script>App.boot(document.getElementById('app'));</script>
 </body>
 </html>
