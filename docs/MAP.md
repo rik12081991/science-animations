@@ -253,7 +253,7 @@ Read a range with `sed -n START,ENDp FILE`. Regenerate: `python3 tools/mapgen.py
 - 528: drawStory()
 - 552: hit()
 
-## topics/reflection.js (552 lines)
+## topics/reflection.js (553 lines)
 - 62: single()
 - 92: # answer helpers
 - 93: norm()
@@ -308,8 +308,8 @@ Read a range with `sed -n START,ENDp FILE`. Regenerate: `python3 tools/mapgen.py
 - 461: drawStory()
 - 482: drawGrid()
 - 485: line()
-- 489: draw()
-- 507: # pointer: story buttons and drag handles
-- 509: pos()
-- 512: hit()
-- 535: endDrag()
+- 490: draw()
+- 508: # pointer: story buttons and drag handles
+- 510: pos()
+- 513: hit()
+- 536: endDrag()

@@ -483,8 +483,9 @@
       const cell = g.w / d['scale.cmPerWidth'], major = d['grid.major'], col = d['grid.colour'], dark = g.withAlpha(d['colour.mirror'], 0.28);
       const ax = L.kind === 'single' ? L.hit[0] : L.mx, ay = L.kind === 'single' ? L.hit[1] : L.mb;   // fixed anchors: the grid never moves with the object
       const line = (x0, y0, x1, y1, k) => g.line(x0, y0, x1, y1, major && k % major === 0 ? dark : col, (major && k % major === 0 ? 1.2 : 0.8) * s);
-      for (let k = 0, x = ax; x <= g.w + cell; k++, x += cell) { line(x, 0, x, g.h, k); if (k) line(ax - k * cell, 0, ax - k * cell, g.h, k); }
-      for (let k = 0, y = ay; y <= g.h + cell; k++, y += cell) { line(0, y, g.w, y, k); if (k) line(0, ay - k * cell, g.w, ay - k * cell, k); }
+      const nx = Math.ceil(Math.max(ax, g.w - ax) / cell), ny = Math.ceil(Math.max(ay, g.h - ay) / cell);   // enough lines both ways from the anchor
+      for (let k = 0; k <= nx; k++) { line(ax + k * cell, 0, ax + k * cell, g.h, k); if (k) line(ax - k * cell, 0, ax - k * cell, g.h, k); }
+      for (let k = 0; k <= ny; k++) { line(0, ay + k * cell, g.w, ay + k * cell, k); if (k) line(0, ay - k * cell, g.w, ay - k * cell, k); }
     }
     function draw() {
       const d = D(), L = layout(), s = L.s;
